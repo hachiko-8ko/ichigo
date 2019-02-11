@@ -1,0 +1,45 @@
+{
+    "extends": "tslint:recommended",
+    "rules": {
+        "quotemark": false, // Can't enforce because I and VSCode use " but unfortunately auto imports use '
+        "max-line-length": false,
+        "space-before-function-paren": false,
+        "align": false,
+        "trailing-comma": false, // WTF is this? this rule produces broken code
+        "member-access": [
+            true,
+            "no-public"
+        ],
+        "arrow-parens": [
+            false
+        ],
+        "object-literal-sort-keys": false,
+        "one-line": [
+            true,
+            "check-open-brace"
+        ],
+        "variable-name": [
+            true,
+            {
+                "check-format": [
+                    "allow-leading-underscore",
+                    "allow-trailing-underscore"
+                ]
+            },
+            "ban-keywords"
+        ],
+        "only-arrow-functions": false,
+        "unified-signatures": false,
+        "array-type": false,
+        "no-trailing-whitespace": [
+            true,
+            "ignore-jsdoc",
+            "ignore-template-strings",
+            "ignore-blank-lines" // automatically cleaned up on save anyway
+        ],
+        "no-empty-interface": false,
+        "object-literal-shorthand": false,
+        "ordered-imports": false, // Maintaining this with auto imports and renames is too much work. Try to briefly turn this off sometimes
+        "no-string-literal": false
+    }
+}
