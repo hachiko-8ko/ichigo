@@ -1,11 +1,8 @@
-/out/*
+/node_modules/*
+/.vscode/*
+/dist_smoke_tests/*
+/tests_out/*
 *.js.map
 *.js
-/node_modules/vinyl-source-stream
-/node_modules/gulp-typescript
-/node_modules/gulp
-/node_modules/browserify
-/node_modules/.bin/gulp
-/node_modules/.bin/browserify
-/.vscode/tasks.json
-/.vscode/settings.json
+!gulpfile.js
+!/dist/*

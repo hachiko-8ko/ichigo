@@ -9,7 +9,7 @@
  * You could always create a single interface using never as a default for the types, but if you do, TS doesn't validate
  * the number of arguments on a parameter or variable. The only restriction is that you don't do more than 9 (forex).
  * But not that you specify all that are required.
- * 
+ *
  * Limits on interfaces extending interfaces keeps us from re-using code. Clipboard inheritance all the way.
  */
 // tslint:disable:callable-types
