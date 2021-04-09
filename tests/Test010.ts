@@ -79,7 +79,7 @@ class TestViewModel extends TestCaseViewModel {
                 dispose(): void;
                 protected loopPostProcess(row: any, addedContent: Node[], allRows: Iterable<any>, previousContent: DocumentFragment): void;
             }
-            </code><pre>
+            </code></pre>
 
             <p>The most basic constructor looks like this: new BoundComponent(viewModel).  The view model is any data type.  Normally it is expected to be an observable object, but it could be a simple string or number, if needed.</p>
 
