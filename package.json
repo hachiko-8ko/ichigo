@@ -1,0 +1,28 @@
+{
+  "name": "ichigo",
+  "version": "0.0.0",
+  "description": "Ichigo HTML5 micro-framework",
+  "main": "gulpfile.js",
+  "directories": {
+    "test": "tests"
+  },
+  "dependencies": {
+    "browserify": "~16.2.3",
+    "gulp": "~3.9.1",
+    "gulp-typescript": "~4.0.2",
+    "vinyl-source-stream": "~2.0.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "ssh://git@github.com/hachiko-8ko/ichigo.git"
+  },
+  "author": "Hachiko",
+  "license": "GPL-3",
+  "bugs": {
+    "url": "https://github.com/hachiko-8ko/ichigo/issues"
+  }
+}
