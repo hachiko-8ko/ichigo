@@ -55,7 +55,7 @@ class TestViewModel extends TestCaseViewModel {
             on the component, it is translated into an addEventListener() call.</p>
 
             <pre><code>
-            <button type="button" i5_event (click)="something">Click Me</button>
+            &lt;button type="button" i5_event (click)="something"&gt;Click Me&lt;/button&gt;
             </code></pre>
 
             <p>This is the same as button.addEventListener('click', component.something.bind(component));</p>
@@ -115,8 +115,8 @@ export class Test009 extends TestCaseView {
 
             const div3 = div("Another element", { id: 'comp5a' });
             const comp5 = new PassThroughComponent({ element: div3 });
-            const comp5a = comp5.setClass('a-class').setClass('b-class c-class').setClass(['d-class', 'e-class']).setStyle('border', 'solid').setStyle({ color: 'blue' });
-            assert(comp5a === comp5, "setClass() and setStyle() should return reference to child");
+            const comp6 = comp5.setClass('a-class').setClass('b-class c-class').setClass(['d-class', 'e-class']).setStyle('border', 'solid').setStyle({ color: 'blue' });
+            assert(comp6 === comp5, "setClass() and setStyle() should return reference to child");
             for (const c of ['a-class', 'b-class', 'c-class', 'd-class', 'e-class']) {
                 assert((Array.from(div3.classList) as any).includes(c), "setClass() should add class to content");
             }
@@ -124,15 +124,6 @@ export class Test009 extends TestCaseView {
             assert(div3.style.color === 'blue', "setStyle() should set style of content");
             comp5.appendToParent(this.testArea);
             assert(!!this.testArea.querySelector('#comp5a'), "appendToParent() should add content as child of target element");
-
-            class SomeCustomElement extends HTMLElement {
-                constructor() {
-                    super();
-                    this.innerHTML = "CUSTOM!";
-                }
-            }
-            const comp6 = new PassThroughComponent({ id: 'comp6', type: 'custom-element', customElement: SomeCustomElement }).appendToParent(this.testArea);
-            assert(comp6.innerHTML === 'CUSTOM!', 'Custom element constructor should be called.');
 
             const comp7 = new PassThroughComponent({ outerHtml: '<span id="comp7" style="display: block;">Hello component 7</span>' }).appendToParent(this.testArea);
             assert(comp7.content.innerHTML === "Hello component 7", "outerHtml setting should set initial HTML");

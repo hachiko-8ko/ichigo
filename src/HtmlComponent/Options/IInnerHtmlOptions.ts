@@ -10,7 +10,6 @@ export interface IInnerHtmlOptions {
     id?: string;
     properties?: Record<string, any>;
     attributes?: Record<string, any>;
-    customElement?: Constructable<HTMLElement>;
 }
 
 /**
@@ -24,7 +23,6 @@ export class InnerHtmlOptions implements IInnerHtmlOptions {
     id?: string;
     properties?: Record<string, any>;
     attributes?: Record<string, any>;
-    customElement?: Constructable<HTMLElement>;
     replace?: boolean;
     constructor(opt: IInnerHtmlOptions) {
         Object.assign(this, opt);

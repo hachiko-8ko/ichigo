@@ -269,23 +269,6 @@ export abstract class Component<TElement extends HTMLElement = HTMLElement> impl
             _ctor_innerHtml.call(this, args);
         }
 
-        // containerType could be any string that can be used as the tag for the component. If it's a custom tag, the browser will see
-        // as HTMLUnknownElement. If you want the browser to know about it, then pass a constructor in containerCustomElement
-        if (args && args.customElement) {
-            if (!this.content.tagName.includes('-')) {
-                throw new Error('HTML Custom Elements require a dash in their tag.');
-            }
-            if (!window.customElements.get(this.content.tagName)) {
-                window.customElements.define(this.content.tagName.toLowerCase(), args.customElement);
-            }
-        }
-
-        // I've never seen customized built-in elements working in Chrome. YMMV
-        if ('is' in this.content) {
-            // tslint:disable-next-line:no-console
-            console.warn('Customized built-in elements are not supported. This may fail.');
-        }
-
         this.mapComponent();
 
         function _ctor_empty(this: Component<TElement>): void {

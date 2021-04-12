@@ -10,7 +10,6 @@ export interface IOuterHtmlOptions {
     id?: string;
     properties?: Record<string, any>;
     attributes?: Record<string, any>;
-    customElement?: Constructable<HTMLElement>;
 }
 
 /**
@@ -23,7 +22,6 @@ export class OuterHtmlOptions implements IOuterHtmlOptions {
     id?: string;
     properties?: Record<string, any>;
     attributes?: Record<string, any>;
-    customElement?: Constructable<HTMLElement>;
     replace?: boolean;
 
     constructor(opt: IOuterHtmlOptions) {
