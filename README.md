@@ -63,4 +63,4 @@ If you unzip types.d.ts in the dist folder, or anywhere at or below tsconfig.jso
 
 ### Examples of use
 
-See the demo page at https://ichigo.github.io for examples and quickstart. The tests in the tests directory also includes general descriptions and several decent, if not at all pretty, examples.
+See the demo page at https://hachiko-8ko.github.io/ichigo-demo for examples and quickstart. The tests in the tests directory also includes general descriptions and several decent, if not at all pretty, examples.
