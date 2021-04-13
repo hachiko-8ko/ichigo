@@ -147,8 +147,12 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
 
         this.viewModel = viewModel;
 
-        if (!window.customElements.get('i-v')) {
-            window.customElements.define('i-v', TemplateReplacementValue);
+        try {
+            if (!window.customElements.get('i-v')) {
+                window.customElements.define('i-v', TemplateReplacementValue);
+            }
+        } catch (err) {
+            // customElements isn't officially part of an ES version yet so won't work even in some recent-ish browsers
         }
 
         const options = args || {} as IComponentBindingOptions;

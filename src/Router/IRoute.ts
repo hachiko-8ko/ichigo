@@ -15,10 +15,11 @@ export interface IRoute {
     route: string | string[];
     /**
      * A callback that should build and return a view or a container, or a parameterless
-     * constructor that returns a view (browsers don't let you new up an HTMLElement)
+     * constructor that returns a view (browsers don't let you new up an HTMLElement), or
+     * an HTML element itself (which is cloned).
      * No automatic injection like angular, currently.
      */
-    payload?: (() => HTMLElement | IContent) | Constructable<IContent>;
+    payload?: (() => HTMLElement | IContent) | Constructable<IContent> | HTMLElement;
 
     /**
      * If a layout is defined, this view is constructed first and then the body-content element

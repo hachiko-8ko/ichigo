@@ -89,14 +89,18 @@ export class PageRouter {
 
         this.routeContainer = document.querySelector('page-router') || document.body;
 
-        if (!window.customElements.get('page-router')) {
-            window.customElements.define('page-router', DivPage, { extends: 'div' });
-        }
-        if (!window.customElements.get('layout-body')) {
-            window.customElements.define('layout-body', DivLayout, { extends: 'div' });
-        }
-        if (!window.customElements.get('not-found')) {
-            window.customElements.define('not-found', DivNotFound, { extends: 'div' });
+        try {
+            if (!window.customElements.get('page-router')) {
+                window.customElements.define('page-router', DivPage, { extends: 'div' });
+            }
+            if (!window.customElements.get('layout-body')) {
+                window.customElements.define('layout-body', DivLayout, { extends: 'div' });
+            }
+            if (!window.customElements.get('not-found')) {
+                window.customElements.define('not-found', DivNotFound, { extends: 'div' });
+            }
+        } catch (err) {
+            // customElements isn't officially part of an ES version yet so won't work even in some recent-ish browsers
         }
 
         if (defaultRoute) {
@@ -264,6 +268,9 @@ export class PageRouter {
             if (routeSegment.startsWith(':')) {
                 let name = routeSegment.slice(1);
                 if (!name.includes('=')) {
+                    if (params.has(name)) {
+                        throw new Error(`Route ${routeString} contains duplicates of the same parameter.`);
+                    }
                     params.set(name, urlSegment);
                 } else {
                     // Handle the mapped static param case.
@@ -272,13 +279,11 @@ export class PageRouter {
                     if (val !== urlSegment) {
                         return false;
                     }
+                    if (params.has(name)) {
+                        throw new Error(`Route ${routeString} contains duplicates of the same parameter.`);
+                    }
+                    params.set(name, urlSegment);
                 }
-
-                if (params.has(name)) {
-                    throw new Error(`Route ${routeString} contains duplicates of the same parameter.`);
-                }
-
-                params.set(name, urlSegment);
             }
             else if (routeSegment !== urlSegment.toLowerCase()) {
                 return false;
@@ -335,8 +340,10 @@ export class PageRouter {
         let view: HTMLElement | IContent | undefined;
         if (constructorTypeGuard(route.payload)) {
             view = new route.payload();
-        } else if (route.payload) {
+        } else if (typeof route.payload === 'function') {
             view = route.payload();
+        } else if (route.payload) {
+            view = route.payload.cloneNode(true) as HTMLElement;
         }
 
         if (view && viewTypeGuard(view)) {
