@@ -227,6 +227,9 @@ export abstract class Component<TElement extends HTMLElement = HTMLElement> impl
     get className(): string {
         return this.content.className;
     }
+    set className(value) {
+        this.content.className = value;
+    }
 
     get classList(): DOMTokenList {
         return this.content.classList;
@@ -368,6 +371,7 @@ export abstract class Component<TElement extends HTMLElement = HTMLElement> impl
      * Filter by matching the componentFilter input with an attribute like component="componentFilter".
      * Enclose the event type in parentheses, and for the value, enter the name of a method in this component.
      * Example: <form :event (click)="submitTheForm"></form>
+     * This is also allowed: <form :event _click_="submitTheForm"></form>
      */
     addInlineEventListeners(componentFilter?: string): this {
         // It would be nice if we could skip this initial filter, like angular does. But there is no CSS selector for
@@ -379,7 +383,11 @@ export abstract class Component<TElement extends HTMLElement = HTMLElement> impl
             }
 
             const currentAttributes = Array.from(ele.attributes);
-            const eventDefinition = currentAttributes.find(f => f.name.startsWith('(') && f.name.endsWith(')') && f.name.length > 2);
+            let eventDefinition = currentAttributes.find(f => f.name.startsWith('(') && f.name.endsWith(')') && f.name.length > 2);
+            if (!eventDefinition) {
+                // Try to find by alternate syntax. This one works better with setAttribute().
+                eventDefinition = currentAttributes.find(f => f.name.startsWith('_') && f.name.endsWith('_') && f.name.length > 2);
+            }
             if (!eventDefinition || !eventDefinition.value) {
                 throw new Error(`Event definition not declared for element ${ele.id || ele.tagName}`);
             }
@@ -502,11 +510,11 @@ export abstract class Component<TElement extends HTMLElement = HTMLElement> impl
     }
 
     /**
-     * Set CSS class on the component content. Fluent.
+     * Add CSS classes on the component content. Fluent.
      */
-    setClass(className: string): this;
-    setClass(classNames: string[]): this;
-    setClass(classNames: string | string[]): this {
+    addClass(className: string): this;
+    addClass(classNames: string[]): this;
+    addClass(classNames: string | string[]): this {
         if (!classNames) {
             return this;
         }

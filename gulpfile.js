@@ -17,7 +17,7 @@ gulp.task('tests', ['build-ts'], function () {
         entry: './tests/Program.js',
         paths: './'
     }).bundle()
-        .pipe(source("ichigo.js"))
+        .pipe(source("ichigo-tests.js"))
         .pipe(gulp.dest('./tests_out'));
 });
 

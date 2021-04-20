@@ -115,7 +115,7 @@ export class Test009 extends TestCaseView {
 
             const div3 = div("Another element", { id: 'comp5a' });
             const comp5 = new PassThroughComponent({ element: div3 });
-            const comp6 = comp5.setClass('a-class').setClass('b-class c-class').setClass(['d-class', 'e-class']).setStyle('border', 'solid').setStyle({ color: 'blue' });
+            const comp6 = comp5.addClass('a-class').addClass('b-class c-class').addClass(['d-class', 'e-class']).setStyle('border', 'solid').setStyle({ color: 'blue' });
             assert(comp6 === comp5, "setClass() and setStyle() should return reference to child");
             for (const c of ['a-class', 'b-class', 'c-class', 'd-class', 'e-class']) {
                 assert((Array.from(div3.classList) as any).includes(c), "setClass() should add class to content");

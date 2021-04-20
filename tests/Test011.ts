@@ -924,7 +924,7 @@ export class Test011 extends TestCaseView {
                     this.appendChild(createElement(elementType.HTMLHeading4Element, { innerHTML: 'Example 6' }));
 
                     this.list = new BoundComponent<HTMLDivElement, ChatListViewModel>(this.viewModel)
-                        .setClass('component chat-list')
+                        .addClass('component chat-list')
                         .setLoop('chats', `<div :item>
                             <div>#<i-v>id</i-v> From:<i-v>fromName</i-v> at <i-v>created</i-v>. <i-v>subject</i-v></div>
                             <div><i-v>stripped</i-v></div>
@@ -936,14 +936,14 @@ export class Test011 extends TestCaseView {
                     this.appendChild(createElement(elementType.HTMLBRElement));
 
                     const subjectDisplay = new BoundComponent<HTMLDivElement, ChatViewModel>(this.current)
-                        .setClass('component chat-subject-display')
+                        .addClass('component chat-subject-display')
                         .setTextTemplate('subject')
                         .setVisibility('subject')
                         .observe()
                         .render();
 
                     const subject = new BoundComponent<HTMLInputElement, ChatViewModel>(this.current, { type: elementType.HTMLInputElement })
-                        .setClass('component chat-subject')
+                        .addClass('component chat-subject')
                         .setValueAttribute('subject')
                         .addWriteTarget('subject')
                         .addWriteEvent()
@@ -952,7 +952,7 @@ export class Test011 extends TestCaseView {
                         .render();
 
                     const from = new BoundComponent<HTMLInputElement, ChatViewModel>(this.current, { type: elementType.HTMLInputElement })
-                        .setClass('component chat-from')
+                        .addClass('component chat-from')
                         .setValueAttribute('fromName')
                         .addWriteTarget('fromName')
                         .addWriteEvent()
@@ -961,7 +961,7 @@ export class Test011 extends TestCaseView {
                         .render();
 
                     const message = new BoundComponent<HTMLTextAreaElement, ChatViewModel>(this.current, { type: elementType.HTMLTextAreaElement })
-                        .setClass('component chat-message')
+                        .addClass('component chat-message')
                         .setValueAttribute('message')
                         .addWriteTarget('message')
                         .addWriteEvent()
@@ -970,7 +970,7 @@ export class Test011 extends TestCaseView {
                         .render();
 
                     const closing = new BoundComponent<HTMLDivElement, ChatViewModel>(this.current)
-                        .setClass('component chat-closing')
+                        .addClass('component chat-closing')
                         .setTemplate(`<i-v>closing</i-v> <br /> <i-v>fromName</i-v>`)
                         .observe()
                         .render();
@@ -980,7 +980,7 @@ export class Test011 extends TestCaseView {
                             type: elementType.HTMLButtonElement,
                             properties: { innerHTML: 'Submit', type: 'submit' }
                         }))
-                        .setClass('component chat-submit')
+                        .addClass('component chat-submit')
                         .addBooleanAttributeMapping('disabled', 'invalid')
                         .observe()
                         .render();
