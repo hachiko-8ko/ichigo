@@ -1,6 +1,6 @@
 import '../src/ExtensionLoader';
 
-import { createElement, anchor, button, createFragment, createHtml, div, paragraph, span } from '../src/Html/CreateElement';
+import { anchor, button, createElement, createFragment, createHtml, div, paragraph, span } from '../src/Html/CreateElement';
 import { deleteNodeContent } from '../src/Html/DeleteNodeContent';
 import { escapeHtml } from '../src/Html/EscapeHtml';
 import { extractNodeContent } from '../src/Html/ExtractNodeContent';
@@ -11,16 +11,6 @@ import { validateUniqueDomIds } from '../src/Html/ValidateUniqueDomIds';
 import { BoundComponent } from '../src/HtmlComponent/BoundComponent';
 import { Component } from '../src/HtmlComponent/Component';
 import { ComponentMap, getComponent } from '../src/HtmlComponent/ComponentMap';
-import {
-    ExistingElementBindingOptions,
-    ExistingLookupBindingOptions,
-    InnerHtmlBindingOptions,
-    OuterHtmlBindingOptions,
-} from '../src/HtmlComponent/Options/IComponentBindingOptions';
-import { ExistingElementOptions } from '../src/HtmlComponent/Options/IExistingElementOptions';
-import { ExistingLookupOptions } from '../src/HtmlComponent/Options/IExistingLookupOptions';
-import { InnerHtmlOptions } from '../src/HtmlComponent/Options/IInnerHtmlOptions';
-import { OuterHtmlOptions } from '../src/HtmlComponent/Options/IOuterHtmlOptions';
 import { observableAssign } from '../src/Observable/ObservableAssign';
 import { ObservableProperty } from '../src/Observable/ObservableProperty';
 import { ObservableProxy } from '../src/Observable/ObservableProxy';
@@ -45,25 +35,17 @@ import { objectFullAssign } from '../src/System/Utility/ObjectFullAssign';
 (function main() {
     // This is not mini, but it is everything that's in any of the mini-ichigo
     // scripts combined into one. Because there is a bit of overlap, the size
-    // is less than the size of all the other scripts put together, IF you want 
+    // is less than the size of all the other scripts put together, IF you want
     // everything.
 
     // This also can be used as an easy template if you want to make your own
     // build. Just delete what you don't want and run the gulp scripts.
 
     const component: any = {
-        BoundComponent,
         Component,
+        BoundComponent,
         ComponentMap,
-        ExistingElementBindingOptions,
-        ExistingElementOptions,
-        ExistingLookupOptions,
-        ExistingLookupBindingOptions,
         getComponent,
-        InnerHtmlBindingOptions,
-        InnerHtmlOptions,
-        OuterHtmlBindingOptions,
-        OuterHtmlOptions,
     };
     const observable: any = {
         EventHandler,

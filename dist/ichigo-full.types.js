@@ -13,16 +13,6 @@ import { validateUniqueDomIds } from 'types/Html/ValidateUniqueDomIds';
 import { BoundComponent } from 'types/HtmlComponent/BoundComponent';
 import { Component } from 'types/HtmlComponent/Component';
 import { ComponentMap, getComponent } from 'types/HtmlComponent/ComponentMap';
-import {
-    ExistingElementBindingOptions,
-    ExistingLookupBindingOptions,
-    InnerHtmlBindingOptions,
-    OuterHtmlBindingOptions,
-} from 'types/HtmlComponent/Options/IComponentBindingOptions';
-import { ExistingElementOptions } from 'types/HtmlComponent/Options/IExistingElementOptions';
-import { ExistingLookupOptions } from 'types/HtmlComponent/Options/IExistingLookupOptions';
-import { InnerHtmlOptions } from 'types/HtmlComponent/Options/IInnerHtmlOptions';
-import { OuterHtmlOptions } from 'types/HtmlComponent/Options/IOuterHtmlOptions';
 import { observableAssign } from 'types/Observable/ObservableAssign';
 import { ObservableProperty } from 'types/Observable/ObservableProperty';
 import { ObservableProxy } from 'types/Observable/ObservableProxy';
@@ -45,17 +35,10 @@ import { isPositiveIntegerString } from 'types/System/Utility/IsInteger';
 import { objectFullAssign } from 'types/System/Utility/ObjectFullAssign';
 
 mi5.component = {
+    Component,
     BoundComponent,
     ComponentMap,
-    ExistingElementBindingOptions,
-    ExistingElementOptions,
-    ExistingLookupOptions,
-    ExistingLookupBindingOptions,
     getComponent,
-    InnerHtmlBindingOptions,
-    InnerHtmlOptions,
-    OuterHtmlBindingOptions,
-    OuterHtmlOptions,
 };
 mi5.observable = {
     EventHandler,
