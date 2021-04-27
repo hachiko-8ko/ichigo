@@ -136,7 +136,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
      * IOuterHtmlOptions - Create a new component setting the outer HTML (including the tag for the component itself)
      * string - Create a new component setting the outer HTML to the string
      */
-    constructor(viewModel: TModel);
+    constructor(viewModel: TModel, options?: IComponentBindingOptions);
     constructor(viewModel: TModel, existingElement: IExistingElementOptions<TElement> & IComponentBindingOptions);
     constructor(viewModel: TModel, existingElement: IExistingLookupOptions & IComponentBindingOptions);
     constructor(viewModel: TModel, newElement: IInnerHtmlOptions & IComponentBindingOptions);
