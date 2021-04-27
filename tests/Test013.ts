@@ -11,8 +11,9 @@ class TestViewModel extends TestCaseViewModel {
             to heavy tasks that, assuming the user's PC is powerful enough, be run on background threads without
             impacting front-end performance.</p>
 
-            <p>You can type away in the next input to see that the front end is not being blocked.</p>
-            <input style="width: 100%;"/>
+            <p>You can type away in the next input to see that the front end is not being blocked and there is no
+            stuttering in the debug console.</p>
+            <input style="width: 100%;"/ id="stutter-check">
 
             <h2>Usage</h2>
             <p>Pass the task and its arguments to taskStart().then(response => wait for the response);</p>
@@ -51,6 +52,12 @@ export class Test013 extends TestCaseView {
                     return primes;
                 }
             }
+
+            // To make it extra difficult, we'll also spend CPU on the current thread logging what the user types.
+            document.getElementById('stutter-check')!.addEventListener('input', (evt: any) => {
+                // tslint:disable-next-line:no-console
+                console.log(evt.currentTarget.value);
+            });
 
             this.log(`Test ${this.viewModel.testNumber}: Test start`);
 
