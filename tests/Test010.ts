@@ -502,7 +502,7 @@ export class Test010 extends TestCaseView {
             // item-level, using a string viewModel (not validated by TypeScript).
             const comp22 = new BoundComponent<HTMLDivElement, string[]>(['One', 'Two', 'Three'], `<div id="comp22" i5_loop="."><span i5_item><i-v>.</i-v> </span></div>`
             ).appendToParent(this.testArea);
-            assert(comp22.innerHTML === '<span i5_item=""><i-v>One</i-v> </span><span i5_item=""><i-v>Two</i-v> </span><span i5_item=""><i-v>Three</i-v> </span>', 'BoundComponent template processed each line individually');
+            assert(comp22.innerHTML === '<span i5_item="" iv_bound_component=""><i-v>One</i-v> </span><span i5_item="" iv_bound_component=""><i-v>Two</i-v> </span><span i5_item="" iv_bound_component=""><i-v>Three</i-v> </span>', 'BoundComponent template processed each line individually');
 
             // Of course, the component can be any class that inherits BoundComponent
             class LoopComponent2 extends BoundComponent<HTMLDivElement, string[]> { }
@@ -595,7 +595,7 @@ export class Test010 extends TestCaseView {
                 outerHtml: `<div id="comp25a" i5_loop="."><span i5_item i5_attr:data-id="this.index"><i-v>.</i-v> </span></div>`,
                 loopItemClass: LoopComponent4
             })).appendToParent(this.testArea);
-            assert(comp25a.innerHTML === '<span i5_item="" i5_attr:data-id="this.index"><i-v>.</i-v> </span><span i5_item="" i5_attr:data-id="this.index"><i-v>.</i-v> </span><span i5_item="" i5_attr:data-id="this.index"><i-v>.</i-v> </span>', 'Render() not called automatically when "this." used.');
+            assert(comp25a.innerHTML === '<span i5_item="" i5_attr:data-id="this.index" iv_loop_component4=""><i-v>.</i-v> </span><span i5_item="" i5_attr:data-id="this.index" iv_loop_component4=""><i-v>.</i-v> </span><span i5_item="" i5_attr:data-id="this.index" iv_loop_component4=""><i-v>.</i-v> </span>', 'Render() not called automatically when "this." used.');
 
             // You can use fields without difficulty if async is true
             const comp25b = new LoopComponent2(['One', 'Two', 'Three'], new OuterHtmlBindingOptions({
@@ -642,7 +642,7 @@ export class Test010 extends TestCaseView {
             const comp26a = BoundComponent.inject('comp-1', { replace: true, type: elementType.HTMLDivElement, id: 'comp26a' }, kw('viewModel', basicViewModel));
             // You can set name by attribute iv_name or by name option.
             const comp26b = BoundComponent.inject('comp-2', { replace: true, type: elementType.HTMLDivElement, id: 'comp26b', name: 'comp-2' }, kw('viewModel', 'nested'));
-            assert(comp26a[0].innerHTML.includes('<div id="comp26b">This is <i-v component="comp-2">nested</i-v></div>'), 'I-V tags are restricted to their assigned components');
+            assert(comp26a[0].innerHTML.includes('<div id="comp26b" iv_bound_component="">This is <i-v component="comp-2">nested</i-v></div>'), 'I-V tags are restricted to their assigned components');
 
             // If name is set, elements MUST have a matching name. It can't be blank.
             // This is to prevent comp-2 replacement from matching comp-1 in the following example.
@@ -655,7 +655,7 @@ export class Test010 extends TestCaseView {
             const comp26c = BoundComponent.inject('comp-1', { replace: true, type: elementType.HTMLDivElement, id: 'comp26c' }, kw('viewModel', basicViewModel));
             // This because comp-2 has no name. It's pretty risky, though, so I don't recommend being lazy like this.
             const comp26d = BoundComponent.inject('comp-2', { replace: true, type: elementType.HTMLDivElement, id: 'comp26d' }, kw('viewModel', 'nested'));
-            assert(comp26c[0].innerHTML.includes('<div id="comp26d">This is <i-v>nested</i-v></div>'), 'Non-scoped I-V tags only match unnamed component');
+            assert(comp26c[0].innerHTML.includes('<div id="comp26d" iv_bound_component="">This is <i-v>nested</i-v></div>'), 'Non-scoped I-V tags only match unnamed component');
 
             // SHORTCUTS
 
@@ -851,7 +851,7 @@ export class Test010 extends TestCaseView {
 
             // Or call .render() at the end. It's a fluent API.
             fluency.removeAttributeMapping('bogus').setLoop('list', '<div :item :text="."></div>').render();
-            assert(fluency.innerHTML === '<div :item="" :text="."><i-v>World</i-v></div><div :item="" :text="."><i-v>Underworld</i-v></div>', 'setLoop() replaces content with the provided loop');
+            assert(fluency.innerHTML === '<div :item="" :text="." iv_bound_component=""><i-v>World</i-v></div><div :item="" :text="." iv_bound_component=""><i-v>Underworld</i-v></div>', 'setLoop() replaces content with the provided loop');
 
             // All these are setting render to true so the output is visible in the test area, but they don't need to be.
             fluency.setVisibility('trumpiness', false, true);

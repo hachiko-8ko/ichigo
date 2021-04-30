@@ -272,6 +272,22 @@ export abstract class Component<TElement extends HTMLElement = HTMLElement> impl
             _ctor_innerHtml.call(this, args);
         }
 
+        // Angular material does something like this. In this case, there's no functionality behind it, but it does make it
+        // useful for a developer to see that an element is a component and what type it is.
+        try {
+            const snake_case = 'iv_' + this.constructor.name.charAt(0).toLowerCase() + this.constructor.name.slice(1)
+                .replace(/\W+/g, ' ')
+                .replace(/([a-z])([A-Z])([a-z])/g, "$1 $2$3")
+                .split(/\B(?=[A-Z]{2,})/)
+                .join(' ')
+                .split(' ')
+                .join('_')
+                .toLowerCase();
+            this.content.setAttribute(snake_case, '');
+        } catch (err) {
+            // If the component has some weird name, no problem. This is just an info field anyway.
+        }
+
         this.mapComponent();
 
         function _ctor_empty(this: Component<TElement>): void {
