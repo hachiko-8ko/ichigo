@@ -412,8 +412,12 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
 
         // Working on a clone here, so we don't see the body being built step by step in the browser.
         for (const repl of clone.querySelectorAll('i-v')) {
-            // If name is specified, component MUST be specified
+            // If name is specified, component MUST be specified. The same if component is specified.
             if (this._name && repl.getAttribute('component') !== this._name) {
+                continue;
+            }
+            // The same if component is specified. Requires repeating because this part breaks when minified
+            if (repl.getAttribute('component') && repl.getAttribute('component') !== this._name) {
                 continue;
             }
             const noescape = repl.hasAttribute('noescape') && repl.getAttribute('noescape') !== 'false';
