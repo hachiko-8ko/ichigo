@@ -10,7 +10,7 @@ import { observableStateCheck } from '../Observable/ObservableState';
 import { Constructable, constructorTypeGuard } from '../System/Types/Constructable';
 import { isNone, None } from '../System/Types/NoneType';
 import { Component } from './Component';
-import { ComponentMap } from './ComponentMap';
+import { ComponentMap, getComponent } from './ComponentMap';
 import { IView } from './Contract/IView';
 import { IInnerHtmlOptions } from './Options/IInnerHtmlOptions';
 import { IExistingElementOptions } from './Options/IExistingElementOptions';
@@ -437,8 +437,12 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
             this._updateHtmlReplacements();
         }
 
-        this.content.innerHTML = '';
-        this.content.appendChild(clone);
+        // Populate the front-end text. Only do this if there is at least one thing to replace. Otherwise, you're just wiping out perfectly
+        // valid HTML5 references for no reason.
+        if (this._replacements.length) {
+            this.content.innerHTML = '';
+            this.content.appendChild(clone);
+        }
 
         // Do a full update if requested to
         if (update) { this.render(); }
@@ -590,6 +594,35 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
     }
 
     /**
+     * 
+     * Auto-Inject calls the default injectBind() on the default BoundComponent class, with no options except selector.
+     * If you pass no inputs, it seeks out all child elements that have at least one ichigo custom property. Keep in mind
+     * that when you have nested objects, this will usually mean something will blow up because you tried to bind an element 
+     * twice. It also will perform much worse.
+     * 
+     * If you pass a selector, it acts the same as BoundComponent.injectBind() with that selector.
+     * 
+     * In my experience, this is almost completely useless. Either the lack of options breaks it (pretty useless if you can't
+     * observe an observable) or the simple act of binding breaks stuff.
+     */
+    autoInject(selector?: string): this {
+        if (selector) {
+            BoundComponent.injectBind(this.viewModel, { parent: this.content, selector });
+        } else {
+            for (const e of this.content.querySelectorAll<HTMLElement>('*')) {
+                for (const attr of Array.from(e.attributes)) {
+                    if (attr.name.startsWith('i5_') || attr.name.startsWith(':') || attr.name.startsWith('data-i5_')) {
+                        BoundComponent.injectBind(this.viewModel, e);
+                        break;
+                    }
+                }
+            }
+        }
+
+        return this;
+    }
+
+    /**
      * Override this method to unbind a view from an observable.
      */
     dispose(): void {
@@ -605,12 +638,11 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         // If the typescript part of the following were important, this would be a problem
         // if this were a derived class.
         const thisclass = this;
-        (this._loopItemClass as typeof BoundComponent).inject(nodeListSelectorAll(addedContent, '[i5_item], [\\00003Aitem], [data-i5_item]'), {
+        (this._loopItemClass as typeof BoundComponent).injectBind(row, nodeListSelectorAll(addedContent, '[i5_item], [\\00003Aitem], [data-i5_item]'), {
             replace: false,
             parent: this,
             async: this._async
-        } as IComponentBindingOptions & ILoopParent<typeof thisclass>,
-            kw('viewModel', row));
+        } as IComponentBindingOptions & ILoopParent<typeof thisclass>);
     }
 
     private _getStringValue(name: string, skipEscape: boolean = false): string | None {

@@ -108,6 +108,9 @@ After each item is added, the method loopPostProcess() is executed, taking these
 
 To do something different, write a derived class and override loopPostProcess() with your own version.
 
+IMPORTANT: This was just said, but bears repeating: loopPostProcess() is called *after* the looped HTML is inserted. loopPostProcess() should be used to
+convert the existing HTML into a component object, not to set the HTML itself (for example, changing the tag of the i5_item element).
+
 WARN: When the loop is rendered, the previous contents are discarded. This means that if you have references to the old item, it's gone. If you want to do something about that, write your own callback, pulling the old items out of previousContent.
 
 * i5_loop:null="propertyName" or i5_loop_null="propertyName"  

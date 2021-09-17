@@ -261,16 +261,24 @@ export abstract class Component<TElement extends HTMLElement = HTMLElement> impl
         if (args && typeof args === 'string') {
             _ctor_string.call(this, args);
         } else if (args && args.selector) {
+            if (args.innerHtml) {
+                args.properties = Object.assign(args.properties || {}, { innerHTML: args.innerHtml });
+            }
             _ctor_lookup.call(this, args);
         } else if (!args) {
             _ctor_empty.call(this);
         } else if (args.element) {
+            if (args.innerHtml) {
+                args.properties = Object.assign(args.properties || {}, { innerHTML: args.innerHtml });
+            }
             _ctor_existingElement.call(this, args);
         } else if (args.outerHtml) {
             _ctor_outerHtml.call(this, args);
         } else {
             _ctor_innerHtml.call(this, args);
         }
+
+        this._checkInlineEventListeners();
 
         // Angular material does something like this. In this case, there's no functionality behind it, but it does make it
         // useful for a developer to see that an element is a component and what type it is.
@@ -307,7 +315,10 @@ export abstract class Component<TElement extends HTMLElement = HTMLElement> impl
                 throw new Error('Element selector could not find element.');
             }
 
-            _ctor_existingElement.call(this, { element } as any);
+            // This is nasty but it makes TypeScript happy without creating a new object copy
+            (existingElement as any).element = element;
+
+            _ctor_existingElement.call(this, existingElement as any);
         }
 
         function _ctor_existingElement(this: Component<TElement>, existingElement: IExistingElementOptions<TElement>): void {
@@ -543,5 +554,22 @@ export abstract class Component<TElement extends HTMLElement = HTMLElement> impl
             this.content.classList.add(name);
         }
         return this;
+    }
+
+    /**
+     * Because addInlineEventListeners() searches all the way down, into nested components, it can't be called
+     * by default. It just throws errors on all but simple test cases. But because these events almost always exist 
+     * internal to the component (e.g. on buttons), it can't be limited. This can be confusing without some kind of
+     * message.
+     */
+    private _checkInlineEventListeners(): void {
+        for (const ele of nodeListSelectorAll([this.content], '[i5_event], [\\00003Aevent], [data-i5_event]')) {
+            if (!(window as any).__event_warning__) {
+                // tslint:disable-next-line:no-console
+                console.info('Inline event listeners are configured. Remember to call addInlineEventListeners().');
+                (window as any).__event_warning__ = true;
+            }
+            setTimeout(() => delete (window as any).__event_warning__, 1000);
+        }
     }
 }
