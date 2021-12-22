@@ -587,7 +587,7 @@ export class Test010 extends TestCaseView {
 
                     // If you look at the JS that TS generates, you'll see that this.index = 0 isn't called until after super().
                     // In render() (called in super()), index is undefined.
-                    this.index = options.parent!.viewModel.indexOf(vm);
+                    this.index = options.loopParent!.viewModel.indexOf(vm);
                 }
             }
 

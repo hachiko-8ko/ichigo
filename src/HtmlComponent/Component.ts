@@ -13,8 +13,8 @@ import { IInnerHtmlOptions } from './Options/IInnerHtmlOptions';
 import { IOuterHtmlOptions } from './Options/IOuterHtmlOptions';
 
 export type InjectOptions = (
-    { replace?: false } |
-    ({ replace: true } & (IInnerHtmlOptions | IOuterHtmlOptions)) |
+    { replace?: false, parent?: Element } |
+    ({ replace: true, parent?: Element } & (IInnerHtmlOptions | IOuterHtmlOptions)) |
     string // Shortcut for { replace: true, outerHtml: 'something' }
 );
 
@@ -38,7 +38,7 @@ export abstract class Component<TElement extends HTMLElement = HTMLElement> impl
      * Accepts Keyword Arguments.
      */
     static inject<TElement extends HTMLElement>(
-        selector: string | HTMLElement | NodeListOf<HTMLElement> | HTMLElement[] | { parent?: Element, selector: string } = '[ichigo]',
+        selector: string | HTMLElement | NodeListOf<HTMLElement> | HTMLElement[] = '[ichigo]',
         options?: InjectOptions | undefined,
         constructor?: Constructable<Component<TElement>>
     ): Array<Component<TElement>> {
@@ -58,13 +58,13 @@ export abstract class Component<TElement extends HTMLElement = HTMLElement> impl
     }
 
     protected static _inject<T extends Component<HTMLElement>>(
-        selector: string | HTMLElement | NodeListOf<HTMLElement> | HTMLElement[] | { parent?: Element, selector: string } = '[ichigo]',
+        selector: string | HTMLElement | NodeListOf<HTMLElement> | HTMLElement[] = '[ichigo]',
         options: Record<string, any>,
         replacerFunction: (element: HTMLElement) => T,
         converterFunction: (element: HTMLElement) => T
     ): T[] {
         const results: T[] = [];
-        const containers = this._lookUpContainersToInject(selector);
+        const containers = this._lookUpContainersToInject(selector, options.parent);
         for (const container of containers) {
             if (options.replace) {
                 // Can't have dupe IDs being created if there are multiple containers. There are 3 places where ID can be set.
@@ -172,7 +172,8 @@ export abstract class Component<TElement extends HTMLElement = HTMLElement> impl
     }
 
     private static _lookUpContainersToInject(
-        selector: string | HTMLElement | NodeListOf<HTMLElement> | HTMLElement[] | { parent?: Element, selector: string } = '[ichigo]'
+        selector: string | HTMLElement | NodeListOf<HTMLElement> | HTMLElement[] = '[ichigo]',
+        parent?: Element
     ): HTMLElement[] {
         if (selector === null) {
             // I've done this myself, which results in a silent failure if accidental.
@@ -183,15 +184,15 @@ export abstract class Component<TElement extends HTMLElement = HTMLElement> impl
 
         // Look up the elements to either replace or convert
         let containers: HTMLElement[];
-        if (typeof selector === 'string') {
+        if (parent && typeof selector === 'string') {
+            parent = parent || document;
+            containers = Array.from(parent.querySelectorAll(selector));
+        } else if (typeof selector === 'string') {
             containers = Array.from(document.querySelectorAll(selector));
         } else if (selector instanceof NodeList) {
             containers = Array.from(selector);
         } else if (Array.isArray(selector)) {
             containers = selector;
-        } else if (typeof selector === 'object' && 'selector' in selector) {
-            const parent = selector.parent || document;
-            containers = Array.from(parent.querySelectorAll(selector.selector));
         } else {
             containers = [selector];
         }

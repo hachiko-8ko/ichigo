@@ -21,13 +21,13 @@ import { Kwarg, kw } from '../System/Types/KeywordArguments';
 
 // This is only passed by loopPostProcess(), unless you write your own component class that does differently.
 export interface ILoopParent<TParent extends BoundComponent<HTMLElement, any> = BoundComponent<HTMLElement, any>> {
-    parent?: TParent;
+    loopParent?: TParent;
 }
 
 export type BoundInjectOptions<TModel = any, TItem extends BoundComponent<HTMLElement, any> = BoundComponent<HTMLElement, any>> = IComponentBindingOptions<TModel, TItem> &
     (
-        { replace?: false } |
-        ({ replace: true } & (IInnerHtmlOptions | IOuterHtmlOptions)) |
+        { replace?: false, parent?: Element } |
+        ({ replace: true, parent?: Element } & (IInnerHtmlOptions | IOuterHtmlOptions)) |
         string // Shortcut for { replace: true, outerHtml: 'something' }
     );
 
@@ -49,7 +49,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
      * Accepts Keyword Arguments. And practically demands their use to set viewModel.
      */
     static inject<TElement extends HTMLElement, TModel>(
-        selector: string | HTMLElement | NodeListOf<HTMLElement> | HTMLElement[] | { parent?: Element, selector: string } = '[ichigo]',
+        selector: string | HTMLElement | NodeListOf<HTMLElement> | HTMLElement[] = '[ichigo]',
         options?: BoundInjectOptions<TModel>,
         constructor?: Constructable<BoundComponent<TElement, TModel>>,
         viewModel?: TModel
@@ -74,7 +74,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
      */
     static injectBind<TElement extends HTMLElement, TModel>(
         viewModel?: TModel,
-        selector: string | HTMLElement | NodeListOf<HTMLElement> | HTMLElement[] | { parent?: Element, selector: string } = '[ichigo]',
+        selector: string | HTMLElement | NodeListOf<HTMLElement> | HTMLElement[] = '[ichigo]',
         options?: BoundInjectOptions<TModel>,
         constructor?: Constructable<BoundComponent<TElement, TModel>>
     ): Array<BoundComponent<TElement, TModel>> {
@@ -607,7 +607,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
      */
     autoInject(selector?: string): this {
         if (selector) {
-            BoundComponent.injectBind(this.viewModel, { parent: this.content, selector });
+            BoundComponent.injectBind(this.viewModel, selector, { parent: this.content });
         } else {
             for (const e of this.content.querySelectorAll<HTMLElement>('*')) {
                 for (const attr of Array.from(e.attributes)) {
@@ -640,7 +640,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         const thisclass = this;
         (this._loopItemClass as typeof BoundComponent).injectBind(row, nodeListSelectorAll(addedContent, '[i5_item], [\\00003Aitem], [data-i5_item]'), {
             replace: false,
-            parent: this,
+            loopParent: this,
             async: this._async
         } as IComponentBindingOptions & ILoopParent<typeof thisclass>);
     }
