@@ -428,6 +428,11 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
             });
         }
 
+        // In the original build of the object, f any replacements start with "this." we need to defer.
+        if (!this._initialized && !this._defer) {
+            this._defer = this._defer || !!this._replacements.find(f => f.source.startsWith("this."));
+        }
+
         // See if we need to defer rendering until after initialization.
         // Note that this will lead to a FOUC, maybe milliseconds, maybe longer.
         if (!this._defer || this._initialized) {
