@@ -1,4 +1,4 @@
-import { Component } from '../../src/Api';
+import { Component } from '../../src/HtmlComponent/Component';
 import { BoundComponent } from '../../src/HtmlComponent/BoundComponent';
 import { ComponentMap, getComponent } from '../../src/HtmlComponent/ComponentMap';
 
