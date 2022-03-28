@@ -89,12 +89,12 @@ class TestViewModel extends TestCaseViewModel {
 
             <p>If you send in a simple data type, not an object, you can reference it by a period by itself ('.') as in "Hello &lt;i-v&gt;.&lt;/i-v&gt;"</p>
 
-            <p>To avoid HTML escaping replacement values, include the noescape attribute, &lt;i-v noescape&gt;. If you need to nest components, indicate which component owns a replacement by using &lt;i-v component="name"&gt;, where name is defined in the component attributes.</p>
+            <p>To avoid HTML escaping replacement values, include the noescape attribute, &lt;i-v noescape&gt;. If you need to nest components, indicate which component owns a replacement by using the name as a custom attribute &lt;i-v name&gt; (thus, names should contain only valid characters).</p>
 
             <p>There are so many custom properties in the bound component that I can't really go through them here. I'll summarize them and you can look through the test cases. The following are custom element attributes:</p>
 
             <ul>
-            <li> i5_name="" or :name="" - Name for the component, used to bind specific &lt;i-v component="name"&gt; tags when there are nested components
+            <li> i5_name="" or :name="" - Name for the component, used to bind specific &lt;i-v name&gt; tags when there are nested components
             <li> i5_text="property" or :text="property" - Set innerHTML to escaped property
             <li> i5_html="property" or :html="property" - Set innerHTML to unescaped property
             <li> i5_value="property" or :value="property" - Set form field value to property
@@ -634,27 +634,29 @@ export class Test010 extends TestCaseView {
             // only certain components.
 
             this.testArea.appendChild(div(`
-                <comp-1 i5_name="comp-1">
-                    Hello <i-v component="comp-1">name</i-v>
-                    <comp-2>This is <i-v component="comp-2">.</i-v></comp-2>
+                <comp-1 i5_name="comp_1">
+                    Hello <i-v comp_1>name</i-v>
+                    <comp-2>This is <i-v comp_2>.</i-v></comp-2>
                 </comp-1>
             `));
             const comp26a = BoundComponent.inject('comp-1', { replace: true, type: elementType.HTMLDivElement, id: 'comp26a' }, kw('viewModel', basicViewModel));
             // You can set name by attribute iv_name or by name option.
-            const comp26b = BoundComponent.inject('comp-2', { replace: true, type: elementType.HTMLDivElement, id: 'comp26b', name: 'comp-2' }, kw('viewModel', 'nested'));
-            assert(comp26a[0].innerHTML.includes('<div id="comp26b" iv_bound_component="">This is <i-v component="comp-2">nested</i-v></div>'), 'I-V tags are restricted to their assigned components');
+            const comp26b = BoundComponent.inject('comp-2', { replace: true, type: elementType.HTMLDivElement, id: 'comp26b', name: 'comp_2' }, kw('viewModel', 'nested'));
+            assert(comp26a[0].innerHTML.includes('Hello <i-v comp_1="">World</i-v>'), 'I-V tags are replaced based on their assigned components');
+            assert(comp26a[0].innerHTML.includes('<div id="comp26b" iv_bound_component="">This is <i-v comp_2="">nested</i-v></div>'), 'I-V tags are restricted to their assigned components');
 
             // If name is set, elements MUST have a matching name. It can't be blank.
             // This is to prevent comp-2 replacement from matching comp-1 in the following example.
             this.testArea.appendChild(div(`
-                <comp-1 i5_name="comp-1">
-                    Hello <i-v component="comp-1">name</i-v>
+                <comp-1 i5_name="comp_1">
+                    Hello <i-v comp_1>name</i-v>
                     <comp-2>This is <i-v>.</i-v></comp-2>
                 </comp-1>
             `));
             const comp26c = BoundComponent.inject('comp-1', { replace: true, type: elementType.HTMLDivElement, id: 'comp26c' }, kw('viewModel', basicViewModel));
             // This because comp-2 has no name. It's pretty risky, though, so I don't recommend being lazy like this.
             const comp26d = BoundComponent.inject('comp-2', { replace: true, type: elementType.HTMLDivElement, id: 'comp26d' }, kw('viewModel', 'nested'));
+            assert(comp26c[0].innerHTML.includes('Hello <i-v comp_1="">World</i-v>'), 'I-V tags are replaced based on their assigned components');
             assert(comp26c[0].innerHTML.includes('<div id="comp26d" iv_bound_component="">This is <i-v>nested</i-v></div>'), 'Non-scoped I-V tags only match unnamed component');
 
             // SHORTCUTS

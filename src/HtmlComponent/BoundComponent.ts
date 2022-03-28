@@ -412,12 +412,16 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
 
         // Working on a clone here, so we don't see the body being built step by step in the browser.
         for (const repl of clone.querySelectorAll('i-v')) {
-            // If name is specified, component MUST be specified. The same if component is specified.
-            if (this._name && repl.getAttribute('component') !== this._name) {
-                continue;
+            // This is a possible error scenario: Attribute does not have a name but contains possibly named i-v tags.
+            // It's only "possible" because there could be other reasons for it (such as 'disabled').
+            // To try and filter out the obvious cases, such as class and style, don't count non-boolean attributes that have values.
+            if (!this._name && repl.attributes.length > 0 && Array.from(repl.attributes).filter(f => f.name !== 'noescape' && !f.value).length) {
+                // tslint:disable-next-line:no-console
+                console.warn(`Unnamed component #${this.content.id} contains possibly named I-V replacement intended for another component: <i-v ${Array.from(repl.attributes).filter(f => f.name !== 'noescape' && !f.value)[0].name}>${repl.innerHTML}</i-v>`);
             }
-            // The same if component is specified. Requires repeating because this part breaks when minified
-            if (repl.getAttribute('component') && repl.getAttribute('component') !== this._name) {
+
+            // If name is specified, i-v tag MUST have that as a tag.
+            if (this._name && !repl.hasAttribute(this._name)) {
                 continue;
             }
             const noescape = repl.hasAttribute('noescape') && repl.getAttribute('noescape') !== 'false';

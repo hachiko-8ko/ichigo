@@ -55,7 +55,7 @@ Even though propertyName looks like code that can be evaluated, it is just a sim
 And if you wanted an insane viewmodel like { ["this.wtf"] = "WTF" }, sorry.
 
 * i5_name="a component name"  
-When name is specified, either by passing as constructor options or by using i5_name, then only i-v tags where component matches that name are replaced. In this example, unlabeled &lt;i-v&gt; are untouched, but &lt;i-v component="a component name"&gt; are updated.
+When name is specified, either by passing as constructor options or by using i5_name, then only i-v tags that contain a custom attribute matching that name are replaced (names should only include valid characters for attributes). In this example, unlabeled &lt;i-v&gt; are untouched, but &lt;i-v a_component_name&gt; are updated.
 
 * i5_text="propertyName"  
 Set innerHTML equal to the value of propertyName, escaping HTML.
