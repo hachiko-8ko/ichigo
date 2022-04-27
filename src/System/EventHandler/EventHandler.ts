@@ -64,9 +64,14 @@ export class EventHandler<TArgs = any> implements IDisposable {
 
     unsubscribeCallback(callback: IAction1<TArgs>): void {
         // Only searches non-delegates
-        const index = this.delegate.findIndex(q => !Array.isArray(q) && q.callback === callback);
-        if (index >= 0) {
-            this.delegate.splice(index, 1);
+        let i = 0;
+        while (i < this.delegate.length) {
+            const q = this.delegate[i];
+            if (!Array.isArray(q) && q.callback === callback) {
+                this.delegate.splice(i, 1);
+                continue;
+            }
+            i++;
         }
     }
 
@@ -77,22 +82,26 @@ export class EventHandler<TArgs = any> implements IDisposable {
         }
 
         // Only searches non-delegates
-        let index = 0;
-        while (index >= 0) {
-            index = this.delegate.findIndex(q => !Array.isArray(q) && q.thisArg === sender);
-            if (index >= 0) {
-                this.delegate.splice(index, 1);
+        let i = 0;
+        while (i < this.delegate.length) {
+            const q = this.delegate[i];
+            if (!Array.isArray(q) && q.thisArg === sender) {
+                this.delegate.splice(i, 1);
+                continue;
             }
+            i++;
         }
     }
 
     unsubscribeDelegate(delegate: RecursiveArray<Delegate>): void {
-        let index = 0;
-        while (index >= 0) {
-            index = this.delegate.findIndex(q => q === delegate);
-            if (index >= 0) {
-                this.delegate.splice(index, 1);
+        let i = 0;
+        while (i < this.delegate.length) {
+            const q = this.delegate[i];
+            if (q === delegate) {
+                this.delegate.splice(i, 1);
+                continue;
             }
+            i++;
         }
     }
 
