@@ -504,6 +504,11 @@ export class Test010 extends TestCaseView {
             ).appendToParent(this.testArea);
             assert(comp22.innerHTML === '<span i5_item="" iv_bound_component=""><i-v>One</i-v> </span><span i5_item="" iv_bound_component=""><i-v>Two</i-v> </span><span i5_item="" iv_bound_component=""><i-v>Three</i-v> </span>', 'BoundComponent template processed each line individually');
 
+            // Now test the ^ (parent) data source.
+            const comp22a = new BoundComponent<HTMLDivElement, { parentProperty: string, iter: string[] }>({ parentProperty: 'out of Three', iter: ['One', 'Two', 'Three'] }, `<div id="comp22a" i5_loop="iter"><span i5_item><i-v>.</i-v> <i-v>^parentProperty</i-v> </span></div>`
+            ).appendToParent(this.testArea);
+            assert(comp22a.innerHTML === '<span i5_item="" iv_bound_component=""><i-v>One</i-v> <i-v>out of Three</i-v> </span><span i5_item="" iv_bound_component=""><i-v>Two</i-v> <i-v>out of Three</i-v> </span><span i5_item="" iv_bound_component=""><i-v>Three</i-v> <i-v>out of Three</i-v> </span>', 'BoundComponent loop contains reference to parent viewModel when referenced by ^');
+
             // Of course, the component can be any class that inherits BoundComponent
             class LoopComponent2 extends BoundComponent<HTMLDivElement, string[]> { }
             const comp23a = new BoundComponent(['One', 'Two', 'Three'], {

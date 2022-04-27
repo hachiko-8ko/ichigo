@@ -18,6 +18,7 @@ import { IExistingLookupOptions } from './Options/IExistingLookupOptions';
 import { IOuterHtmlOptions } from './Options/IOuterHtmlOptions';
 import { IComponentBindingOptions } from './Options/IComponentBindingOptions';
 import { Kwarg, kw } from '../System/Types/KeywordArguments';
+import { e_ } from '../System/Utility/Elvis';
 
 // This is only passed by loopPostProcess(), unless you write your own component class that does differently.
 export interface ILoopParent<TParent extends BoundComponent<HTMLElement, any> = BoundComponent<HTMLElement, any>> {
@@ -35,7 +36,7 @@ export type BoundInjectOptions<TModel = any, TItem extends BoundComponent<HTMLEl
  * A super-basic component that allows configuration of data-binding functions using specially-named HTML attributes, as in Angular
  * or Vue.
  */
-export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel = any>
+export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel = any, TParent extends BoundComponent = any>
     extends Component<TElement> implements IView<TElement, TModel> {
 
     /**
@@ -106,6 +107,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
     }
 
     viewModel: TModel;
+    loopParent?: TParent; // only sent when this is a component child creted by loopPostProcess
 
     private _name?: string;
     private _attributeBindings: Array<{ attribute: string, source: string, bool: boolean, negative: boolean }> = [];
@@ -170,6 +172,9 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
                 throw new Error('loopItemClass is not an bound component');
             }
         }
+
+        this.loopParent = options.loopParent; // undefined in most cases
+
         this._loopItemClass = options.loopItemClass || BoundComponent;
 
         this._configureComponentBindings();
@@ -226,8 +231,8 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         // So be careful. It's on you.
         for (const bind of this._writeTargets) {
             if (bind.startsWith('this.')) {
-                const target = (this as Record<string, any>)[bind];
-                writeValue(target, () => (this as Record<string, any>)[bind] = value, this);
+                const target = (this as Record<string, any>)[bind.slice(5)];
+                writeValue(target, () => (this as Record<string, any>)[bind.slice(5)] = value, this);
             } else if (bind === '.') {
                 if (observableStateCheck<any>(this.viewModel)) {
                     this.viewModel.value = value;
@@ -235,19 +240,13 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
                     // Assume that the view model is either FormFieldValue or a function that takes one.
                     writeValue(this.viewModel, () => this.viewModel = value as any, this.viewModel);
                 }
+            } else if (bind.startsWith('^') && e_(this.loopParent).viewModel && typeof this.loopParent!.viewModel === 'object') {
+                // Note: Not doing a '^' by itself because that's a pretty BS case. If this is the loop child, the parent is probably
+                // an object or an iterable, not really something you'll read or write to directly.
+                // Might do a shortcut to the parent component's 'this'
+                writeToViewModelObject(this.loopParent!, bind.slice(1));
             } else if (typeof this.viewModel === 'object') {
-                if (observableStateCheck<any>(this.viewModel)) {
-                    // With observable state, we need to get the state, update it, and write the whole thing back.
-                    // While it is possible to update a single property in some cases, it doesn't allow reuse of already-working code.
-                    const tmp = this.viewModel.value;
-                    const target = tmp[bind];
-                    writeValue(target, () => tmp[bind] = value, tmp);
-                    this.viewModel.value = tmp;
-
-                } else {
-                    const target = (this.viewModel as Record<string, any>)[bind];
-                    writeValue(target, () => (this.viewModel as Record<string, any>)[bind] = value, this.viewModel);
-                }
+                writeToViewModelObject(this, bind);
             }
         }
 
@@ -263,6 +262,21 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
             // This needs to be a function to be flexible, because if target is a value type or immutable, writing
             // it directly replaces only the value without updating the model.
             writeToProperty();
+        }
+
+        function writeToViewModelObject(comp: BoundComponent, property: string) {
+            if (observableStateCheck<any>(comp.viewModel)) {
+                // With observable state, we need to get the state, update it, and write the whole thing back.
+                // While it is possible to update a single property in some cases, it doesn't allow reuse of already-working code.
+                const tmp = comp.viewModel.value;
+                const target = tmp[property];
+                writeValue(target, () => tmp[property] = value, tmp);
+                comp.viewModel.value = tmp;
+
+            } else {
+                const target = (comp.viewModel as Record<string, any>)[property];
+                writeValue(target, () => (comp.viewModel as Record<string, any>)[property] = value, comp.viewModel);
+            }
         }
     }
 
@@ -434,7 +448,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
 
         // In the original build of the object, f any replacements start with "this." we need to defer.
         if (!this._initialized && !this._defer) {
-            this._defer = this._defer || !!this._replacements.find(f => f.source.startsWith("this."));
+            this._defer = this._defer || !!this._replacements.find(f => f.source.startsWith('this.'));
         }
 
         // See if we need to defer rendering until after initialization.
@@ -680,7 +694,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
             thisArg = thisArg.value;
         }
 
-        if (name.startsWith("this.")) {
+        if (name.startsWith('this.')) {
             thisArg = this;
             name = name.slice(5);
             if (!(name in this)) {
@@ -689,6 +703,20 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
                 return;
             }
             source = (this as Record<string, any>)[name];
+
+        } else if (name.startsWith('^') && e_(this.loopParent).viewModel && typeof e_(this.loopParent).viewModel === 'object') {
+            // Note: Not doing a '^' by itself because that's a pretty BS case. If this is the loop child, the parent is probably
+            // an object or an iterable, not really something you'll read or write to directly.
+            // Might do a shortcut to the parent component's 'this'
+
+            thisArg = this.loopParent!.viewModel;
+
+            if (!(name.slice(1) in thisArg)) {
+                // tslint:disable-next-line:no-console
+                console.warn(`${name} does not exist on viewModel parent view model.`);
+                return {};
+            }
+            source = thisArg[name.slice(1)];
 
         } else if (name === '.') {
             source = thisArg;
