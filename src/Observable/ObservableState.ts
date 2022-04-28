@@ -80,7 +80,9 @@ export class ObservableState<T = any> extends ObservableBase<PropertyChangedEven
     }
 
     getState(): Readonly<T> {
-        return this.value;
+        // The Readonly type works fine and it's fast ... in typescript.
+        // In javascript, if you just return the value, nothing prevents it from being edited.
+        return cloneDeep(this.value);
     }
 
     /**
