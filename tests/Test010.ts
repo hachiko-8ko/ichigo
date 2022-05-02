@@ -507,7 +507,50 @@ export class Test010 extends TestCaseView {
             // Now test the ^ (parent) data source.
             const comp22a = new BoundComponent<HTMLDivElement, { parentProperty: string, iter: string[] }>({ parentProperty: 'out of Three', iter: ['One', 'Two', 'Three'] }, `<div id="comp22a" i5_loop="iter"><span i5_item><i-v>.</i-v> <i-v>^parentProperty</i-v> </span></div>`
             ).appendToParent(this.testArea);
+
             assert(comp22a.innerHTML === '<span i5_item="" iv_bound_component=""><i-v>One</i-v> <i-v>out of Three</i-v> </span><span i5_item="" iv_bound_component=""><i-v>Two</i-v> <i-v>out of Three</i-v> </span><span i5_item="" iv_bound_component=""><i-v>Three</i-v> <i-v>out of Three</i-v> </span>', 'BoundComponent loop contains reference to parent viewModel when referenced by ^');
+
+            // The i-v :source property lets you grab data from any boundComponent on the page, referenced by id
+            const comp22b1 = new BoundComponent<HTMLSpanElement, string>("out of Three", { id: "comp22b1", type: "span" }).appendToParent(this.testArea);
+            const comp22b = new BoundComponent<HTMLDivElement, string[]>(['One', 'Two', 'Three'], `<div id="comp22b" i5_loop="."><span i5_item><i-v>.</i-v> <i-v :source="comp22b1">.</i-v> </span></div>`
+            ).appendToParent(this.testArea);
+            assert(comp22b.innerHTML === '<span i5_item="" iv_bound_component=""><i-v>One</i-v> <i-v :source="comp22b1">out of Three</i-v> </span><span i5_item="" iv_bound_component=""><i-v>Two</i-v> <i-v :source="comp22b1">out of Three</i-v> </span><span i5_item="" iv_bound_component=""><i-v>Three</i-v> <i-v :source="comp22b1">out of Three</i-v> </span>', 'Data fetched from other component when referenced by :source');
+
+            // The :source property also works for other custom attributes that are used to render the data (all but write targets)
+            const comp22c = new BoundComponent<HTMLSpanElement, { passFail: string, falsy: boolean, style: string }>({ passFail: "PASSED", falsy: false, style: "text-decoration:underline;" }, { id: "comp22c", type: "span" }).appendToParent(this.testArea);
+            const comp22d = new BoundComponent<HTMLInputElement, { passFail: string, falsy: boolean }>({ passFail: "FAILED", falsy: true }, {
+                type: "input",
+                attributes: {
+                    i5_source: "comp22c",
+                    i5_attr_attributecheck: "passFail",
+                    i5_value: "passFail",
+                    i5_class: "passFail",
+                    i5_style: "style"
+                }
+            }).appendToParent(this.testArea);
+
+            assert(comp22d.content.getAttribute('attributecheck') === "PASSED", "Other component can be used as source for :attr:value");
+            assert(comp22d.content.value === "PASSED", "Other component can be used as source for :value");
+            assert(comp22d.content.className === "PASSED", "Other component can be used as source for :class");
+            assert(comp22d.content.style.textDecoration === "underline", "Other component can be used as source for :style");
+
+            const comp22e = new BoundComponent<HTMLDivElement, { passFail: string, falsy: boolean }>({ passFail: "FAILED", falsy: true }, {
+                type: "div",
+                id: "comp22e",
+                properties: {
+                    innerHTML: '<div :item><i-v #comp22e>.</i-v></div>',
+                },
+                attributes: {
+                    i5_source: "comp22c",
+                    i5_switch0_passed: "falsy",
+                    i5_if: "falsy",
+                    i5_loop: "passFail"
+                }
+            }).appendToParent(this.testArea);
+
+            assert(comp22e.content.className === "passed", "Other component can be used as source for :switch:class");
+            assert(comp22e.content.style.display === "none", "Other component can be used as source for :if");
+            assert(Array.from(comp22e.content.querySelectorAll("div")).length === 6 && comp22e.content.querySelector("div")!.innerText === "P", "Other component can be used as soruce for :loop");
 
             // Of course, the component can be any class that inherits BoundComponent
             class LoopComponent2 extends BoundComponent<HTMLDivElement, string[]> { }

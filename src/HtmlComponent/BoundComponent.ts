@@ -110,20 +110,21 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
     loopParent?: TParent; // only sent when this is a component child creted by loopPostProcess
 
     private _id?: string;
-    private _attributeBindings: Array<{ attribute: string, source: string, bool: boolean, negative: boolean }> = [];
-    private _valueAttribute?: string;
-    private _writeTargets: string[] = [];
-    private _cssClasses?: string;
-    private _cssClassSwitches: Array<{ class: string, source: string, negative: boolean }> = [];
-    private _cssStyle?: string;
-    private _cssDisplay?: { source: string, negative: boolean };
+    private _attributeBindings: Array<{ attribute: string, source: string, bool: boolean, negative: boolean, otherComponentId?: string }> = [];
+    private _valueAttribute?: { source: string, otherComponentId?: string };
+    private _writeTargets: string[] = []; // Can only write to THIS component
+    private _cssClasses?: { cssClass: string, otherComponentId?: string };
+    private _cssClassSwitches: Array<{ class: string, source: string, negative: boolean, otherComponentId?: string }> = [];
+    private _cssStyle?: { style: string, otherComponentId?: string };
+    private _cssDisplay?: { source: string, negative: boolean, otherComponentId?: string };
     private _previousCssDisplaySetting?: string;
-    private _loop?: { source: string, postProcess: boolean, fragment: DocumentFragment };
+    private _loop?: { source: string, postProcess: boolean, fragment: DocumentFragment, otherComponentId?: string };
     private _loopItemClass: Constructable<BoundComponent>;
     private _replacements: Array<{
         element: HTMLElement,
         source: string,
-        noescape: boolean
+        noescape: boolean,
+        otherComponentId?: string
     }> = [];
     private _async = false;
     private _defer = false;
@@ -321,7 +322,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         for (const item of this._attributeBindings) {
             if (item.bool) {
                 // For boolean attributes, the very existence of the attribute means it is considered to be true.
-                let val = this._getUntypedValue(item.source);
+                let val = this._getUntypedValue(item.source, item.otherComponentId);
                 if (item.negative) {
                     val = !val;
                 } else {
@@ -334,22 +335,22 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
                 }
 
             } else {
-                this.content.setAttribute(item.attribute, this._getStringValue(item.source) || '');
+                this.content.setAttribute(item.attribute, this._getStringValue(item.source, false, item.otherComponentId) || '');
             }
         }
 
         if (this._valueAttribute) {
             // Calls setFormFieldValue behind the scenes.
-            this.value = this._getUntypedValue(this._valueAttribute);
+            this.value = this._getUntypedValue(this._valueAttribute.source, this._valueAttribute.otherComponentId);
         }
 
         if (this._cssClasses) {
-            this.content.className = this._getStringValue(this._cssClasses) || '';
+            this.content.className = this._getStringValue(this._cssClasses.cssClass, false, this._cssClasses.otherComponentId) || '';
         }
 
         for (const item of this._cssClassSwitches) {
             // If truthy, add class, else delete it.
-            let val = !!this._getUntypedValue(item.source);
+            let val = !!this._getUntypedValue(item.source, item.otherComponentId);
             if (item.negative) {
                 val = !val;
             }
@@ -361,7 +362,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         }
 
         if (this._cssStyle) {
-            const val = this._getStringValue(this._cssStyle) || '';
+            const val = this._getStringValue(this._cssStyle.style, false, this._cssStyle.otherComponentId) || '';
             this.content.style.cssText = val;
             if (val && !this.content.style.cssText) {
                 // tslint:disable-next-line:no-console
@@ -370,7 +371,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         }
 
         if (this._loop) {
-            const iterable = this._getUntypedValue(this._loop.source);
+            const iterable = this._getUntypedValue(this._loop.source, this._loop.otherComponentId);
             if (iterable && typeof iterable[Symbol.iterator] === 'function') {
                 const previousContent = extractNodeContent(this.content);
                 for (const row of iterable) {
@@ -387,7 +388,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
 
         if (this._cssDisplay) {
             // If falsy, set display: none (saving previous value). If truthy, restore previous value (if block, flex, but not if none)
-            let val = this._getUntypedValue(this._cssDisplay.source);
+            let val = this._getUntypedValue(this._cssDisplay.source, this._cssDisplay.otherComponentId);
             if (this._cssDisplay.negative) {
                 val = !val;
             }
@@ -451,10 +452,12 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
             }
 
             const noescape = repl.hasAttribute('noescape') && repl.getAttribute('noescape') !== 'false';
+            const otherComponentId = repl.getAttribute('i5_source') || repl.getAttribute('source') || (repl as HTMLElement).dataset.i5_source || (repl as HTMLElement).dataset.source || repl.getAttribute(':source');
             this._replacements.push({
                 element: repl as HTMLElement,
                 source: repl.innerHTML,
-                noescape: noescape
+                noescape: noescape,
+                otherComponentId: otherComponentId || undefined
             });
         }
 
@@ -493,14 +496,14 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         return this.setTemplate('<i-v>' + templateProperty + '</i-v>', update);
     }
 
-    setLoop(source: string = '.', fragment: DocumentFragment | string, skipPostProcess: boolean = false, update: boolean = false): this {
+    setLoop(source: string = '.', fragment: DocumentFragment | string, skipPostProcess: boolean = false, update: boolean = false, otherComponentId?: string): this {
         if (!source || !fragment) {
             throw new Error('Invalid arguments');
         }
         if (typeof fragment === 'string') {
             fragment = createFragment(fragment);
         }
-        this._loop = { source, postProcess: !skipPostProcess, fragment };
+        this._loop = { source, postProcess: !skipPostProcess, fragment, otherComponentId };
         if (update) { this.render(); }
         return this;
     }
@@ -511,42 +514,42 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         return this;
     }
 
-    setValueAttribute(source: string | undefined = '.', update: boolean = false): this {
-        this._valueAttribute = source;
+    setValueAttribute(source: string | undefined = '.', update: boolean = false, otherComponentId?: string): this {
+        this._valueAttribute = { source, otherComponentId };
         if (update) { this.render(); }
         return this;
     }
 
-    setVisibility(source: string | undefined = '.', negative: boolean = false, update: boolean = false): this {
+    setVisibility(source: string | undefined = '.', negative: boolean = false, update: boolean = false, otherComponentId?: string): this {
         if (!source) {
             this._cssDisplay = undefined;
         } else {
-            this._cssDisplay = { source, negative };
+            this._cssDisplay = { source, negative, otherComponentId };
         }
         if (update) { this.render(); }
         return this;
     }
 
-    addAttributeMapping(attribute: string, source: string = '.', update: boolean = false): this {
+    addAttributeMapping(attribute: string, source: string = '.', update: boolean = false, otherComponentId?: string): this {
         if (!source || !attribute) {
             throw new Error('Invalid arguments');
         }
         // Don't bind a single property to multiple things
         if (!this._attributeBindings.find(f => f.attribute === attribute)) {
-            this._attributeBindings.push({ attribute, source, bool: false, negative: false });
+            this._attributeBindings.push({ attribute, source, bool: false, negative: false, otherComponentId });
         }
 
         if (update) { this.render(); }
         return this;
     }
 
-    addBooleanAttributeMapping(attribute: string, source: string = '.', negative: boolean = false, update: boolean = false): this {
+    addBooleanAttributeMapping(attribute: string, source: string = '.', negative: boolean = false, update: boolean = false, otherComponentId?: string): this {
         if (!source || !attribute) {
             throw new Error('Invalid arguments');
         }
         // Don't bind a single property to multiple things
         if (!this._attributeBindings.find(f => f.attribute === attribute)) {
-            this._attributeBindings.push({ attribute, source, bool: true, negative });
+            this._attributeBindings.push({ attribute, source, bool: true, negative, otherComponentId });
         }
 
         if (update) { this.render(); }
@@ -564,25 +567,25 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         return this;
     }
 
-    setCssClass(cls: string | undefined = '.', update: boolean = false): this {
-        this._cssClasses = cls;
+    setCssClass(cls: string | undefined = '.', update: boolean = false, otherComponentId?: string): this {
+        this._cssClasses = { cssClass: cls, otherComponentId };
         if (update) { this.render(); }
         return this;
     }
 
-    setCssStyle(style: string | undefined = '.', update: boolean = false): this {
-        this._cssStyle = style;
+    setCssStyle(style: string | undefined = '.', update: boolean = false, otherComponentId?: string): this {
+        this._cssStyle = { style, otherComponentId };
         if (update) { this.render(); }
         return this;
     }
 
-    addCssClassSwitch(cls: string, source: string = '.', negative: boolean = false, update: boolean = false): this {
+    addCssClassSwitch(cls: string, source: string = '.', negative: boolean = false, update: boolean = false, otherComponentId?: string): this {
         if (!cls || !source) {
             throw new Error('Invalid arguments');
         }
         // Don't bind a single property to multiple things
         if (!this._cssClassSwitches.find(f => f.class === cls)) {
-            this._cssClassSwitches.push({ class: cls, source, negative });
+            this._cssClassSwitches.push({ class: cls, source, negative, otherComponentId });
         }
 
         if (update) { this.render(); }
@@ -680,8 +683,8 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         } as IComponentBindingOptions & ILoopParent<typeof thisclass>);
     }
 
-    private _getStringValue(name: string, skipEscape: boolean = false): string | None {
-        const value = this._getUntypedValue(name);
+    private _getStringValue(name: string, skipEscape: boolean = false, sourceComponentId?: string): string | None {
+        const value = this._getUntypedValue(name, sourceComponentId);
         if (isNone(value)) {
             return value;
         } else if (typeof value === 'string') {
@@ -691,15 +694,20 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         }
     }
 
-    private _getUntypedValue(name: string): any {
+    private _getUntypedValue(name: string, sourceComponentId?: string): any {
+        let component: any = this;
         let source: any;
+
+        if (sourceComponentId) {
+            component = getComponent(sourceComponentId) || component;
+        }
 
         // I'm pretty sure this is being validated during construction but be safe
         if (!name) {
             return;
         }
 
-        let thisArg: any = this.viewModel;
+        let thisArg: any = component.viewModel;
 
         // If VM is a state, get the current state value.
         if (observableStateCheck<any>(thisArg)) {
@@ -707,21 +715,21 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         }
 
         if (name.startsWith('this.')) {
-            thisArg = this;
+            thisArg = component;
             name = name.slice(5);
-            if (!(name in this)) {
+            if (!(name in component)) {
                 // tslint:disable-next-line:no-console
                 console.warn(`this.${name} does not exist on view.`);
                 return;
             }
-            source = (this as Record<string, any>)[name];
+            source = (component as Record<string, any>)[name];
 
-        } else if (name.startsWith('^') && e_(this.loopParent).viewModel && typeof e_(this.loopParent).viewModel === 'object') {
+        } else if (name.startsWith('^') && e_(component.loopParent).viewModel && typeof e_(component.loopParent).viewModel === 'object') {
             // Note: Not doing a '^' by itself because that's a pretty BS case. If this is the loop child, the parent is probably
             // an object or an iterable, not really something you'll read or write to directly.
             // Might do a shortcut to the parent component's 'this'
 
-            thisArg = this.loopParent!.viewModel;
+            thisArg = component.loopParent!.viewModel;
 
             if (!(name.slice(1) in thisArg)) {
                 // tslint:disable-next-line:no-console
@@ -755,7 +763,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
 
     private _updateHtmlReplacements(): void {
         for (const repl of this._replacements) {
-            const newValue = this._getStringValue(repl.source, repl.noescape) || '';
+            const newValue = this._getStringValue(repl.source, repl.noescape, repl.otherComponentId) || '';
             const element = repl.element;
             const currentValue = element.innerHTML;
             if (newValue !== currentValue) {
@@ -783,6 +791,9 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
             }
         }
 
+        // Get the alternate source Id
+        const otherComponentId: string = e_(currentAttributes.find(f => f.name === 'i5_source' || f.name === ':source')).value;
+
         let textHtmlSet = false;
         for (const prop of currentAttributes) {
             const type = this._parseAttributeName(prop.name);
@@ -797,12 +808,12 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
                 // fall through
                 case "bool":
                     if (!type.detail) { throw new Error('Programming error'); }
-                    this.addBooleanAttributeMapping(type.detail, prop.value, negative);
+                    this.addBooleanAttributeMapping(type.detail, prop.value, negative, false, otherComponentId);
                     deferIfNeeded.call(this);
                     break;
                 case "attr":
                     if (!type.detail) { throw new Error('Programming error'); }
-                    this.addAttributeMapping(type.detail, prop.value);
+                    this.addAttributeMapping(type.detail, prop.value, false, otherComponentId);
                     deferIfNeeded.call(this);
                     break;
                 case "switchClassNegative":
@@ -810,7 +821,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
                 // fall through
                 case "switchClass":
                     if (!type.detail) { throw new Error('Programming error'); }
-                    this.addCssClassSwitch(type.detail, prop.value, negative);
+                    this.addCssClassSwitch(type.detail, prop.value, negative, false, otherComponentId);
                     deferIfNeeded.call(this);
                     break;
                 case "text":
@@ -826,22 +837,22 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
                     deferIfNeeded.call(this);
                     break;
                 case "value":
-                    this.setValueAttribute(prop.value);
+                    this.setValueAttribute(prop.value, false, otherComponentId);
                     deferIfNeeded.call(this);
                     break;
                 case "ifNegative":
                     negative = true;
                 // fall through
                 case "if":
-                    this.setVisibility(prop.value, negative);
+                    this.setVisibility(prop.value, negative, false, otherComponentId);
                     deferIfNeeded.call(this);
                     break;
                 case "style":
-                    this.setCssStyle(prop.value);
+                    this.setCssStyle(prop.value, false, otherComponentId);
                     deferIfNeeded.call(this);
                     break;
                 case "class":
-                    this.setCssClass(prop.value);
+                    this.setCssClass(prop.value, false, otherComponentId);
                     deferIfNeeded.call(this);
                     break;
                 case "input":
@@ -849,16 +860,18 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
                     if (!prop.value) {
                         break;
                         // Else fall through, using the value of the input attribute as a target attribute
+                        // Shortcut i5_input_foo is the same as i5_target="foo" i5_value="foo"
+                        // But only write to the local view model, not another component's
                     } else if (type.detail) {
-                        this.setValueAttribute(prop.value);
+                        this.setValueAttribute(prop.value, false);
                     }
                 case "target":
-                    this.addWriteTarget(prop.value);
+                    this.addWriteTarget(prop.value, false);
                     deferIfNeeded.call(this);
                     break;
                 case "loop":
                     // Grab the base content for the loop, pulling it out of the DOM.
-                    this.setLoop(prop.value, extractNodeContent(this.content), type.detail === 'null');
+                    this.setLoop(prop.value, extractNodeContent(this.content), type.detail === 'null', false, otherComponentId);
                     deferIfNeeded.call(this);
                     break;
                 case "item":
@@ -878,10 +891,15 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         if (name.startsWith(':')) {
             // General ichigo shortcut
             name = 'i5_' + name.slice(1);
-        } else if (name === 'i5_item') {
+        }
+        if (name === 'i5_item') {
             // This is used to indicate an item component, nothing else.
             return;
-        } else if (name === 'i5_event') {
+        } else if (name === 'i5_source') {
+            // This is used to indicate a source component. It's read separately.
+            return;
+        }
+        else if (name === 'i5_event') {
             // This is used only in Component.addInlineEventListeners().
             return;
         } else if (!name.startsWith('i5_')) {

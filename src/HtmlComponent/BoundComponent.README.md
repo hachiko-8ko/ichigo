@@ -36,13 +36,11 @@ I *really* recommend that you do not nest templates inside i-v tags (where the v
 By default, when binding a component, it will snap up any i-v elements it sees. This could create a problem in this example of nested components:
 > `<component1> <i-v>name</i-v> <component2> <i-v>childName</i-v> </component2> </component1>`
 
-Which does childName belong with? Is the data in component 1 or 2?  In this case, it's 2. This isn't something that is a problem in, say, angular, because each component is stored in a separate file. It's clean, it's clearly delimited, and it requires a custom build process. We don't have that here. In Ichigo, you reference the id, like so (pick your favorite version):
+Which does childName belong with? Is the data in component 1 or 2?  In this case, it's 2. This isn't something that is a problem in, say, angular, because each component is stored in a separate file. It's clean, it's clearly delimited, and it requires a custom build process. We don't have that here. In Ichigo, you reference the id, like so (pick your favorite version) (this is a case-insensitive test):
 
 > `<component1 id=component1> <i-v>name</i-v> <component2 id=component2> <i-v #component2>childName</i-v> </component2> </component1>`
 > `<component1 id=component1> <i-v>name</i-v> <component2 id=component2> <i-v component="component2">childName</i-v> </component2> </component1>`
 > `<component1 id=component1> <i-v>name</i-v> <component2 id=component2> <i-v data-component="component2">childName</i-v> </component2> </component1>`
-
-This is a case-insensitive test.
 
 ## Custom Attributes
 
@@ -65,7 +63,16 @@ Example: referencing a component property:
 
 Even though propertyName looks like code that can be evaluated, it is just a simple name lookup.  You cannot access more complicated properties like this.callMethod().name.toLowerCase() like you can attempt in Angular.
 
-And if you wanted an insane viewmodel like { ["this.wtf"] = "WTF" }, sorry.
+And if you wanted an insane viewmodel where the properties have "this." in the name like { ["this.wtf"] = "WTF" }, sorry.
+
+It is also possible to take data from another component, anywhere in the document, using the id (it fetches using document.getElementById() so it must exist, and it must be bound to a component).
+
+Example: referencing another component (i-v tags will let you skip the "iv_" prefix for convenience)
+> `<i-v :source="someId">name<i-v>`
+> `<i-v iv_source="someId">name<i-v>`
+> `<i-v data-iv_source="someId">name<i-v>`
+
+All custom attributes on a item must use the same source. If you want to vary the sources, then write the code in a method and call that.
 
 * i5_text="propertyName"  
 Set innerHTML equal to the value of propertyName, escaping HTML.
