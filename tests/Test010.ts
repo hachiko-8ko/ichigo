@@ -109,7 +109,7 @@ class TestViewModel extends TestCaseViewModel {
             <li> i5_if0="property" or :if-="property" - Reverse of previous option
             <li> i5_loop="property" or :loop="property" - Repeat element once for each item in property, calling loopPostProcess() after
             <li> i5_loop_null="property" or i5_loop:null="property" or :loop:null="property" - The same, but loopPostProcess() is not called
-            <li> i5_item or :item (no value) - Indicate a the item in a loop that should be converted into a component
+            <li> i5_item or :item (no value) - Indicate a the item in a loop that should be converted into a component (optional)
             <li> i5_input or :input (no value) - Bind input events on form field to the BoundComponent.write() method
             <li> i5_target="property" or :target="property" - BoundComponent.write() should send input data to property
             <li> i5_target1="property", i5_target2="property", :target1="property", etc - The same, but write to multiple targets
@@ -500,21 +500,21 @@ export class Test010 extends TestCaseView {
             // And now that we understand injection, we can finally handle loop items using the default looper.
             // This uses the default BoundComponent for the top-level, using a string[] viewModel, and the same class for the
             // item-level, using a string viewModel (not validated by TypeScript).
-            const comp22 = new BoundComponent<HTMLDivElement, string[]>(['One', 'Two', 'Three'], `<div id="comp22" i5_loop="."><span i5_item><i-v>.</i-v> </span></div>`
+            const comp22 = new BoundComponent<HTMLDivElement, string[]>(['One', 'Two', 'Three'], `<div id="comp22" i5_loop="."><span><i-v>.</i-v> </span></div>`
             ).appendToParent(this.testArea);
-            assert(comp22.innerHTML === '<span i5_item="" iv_bound_component=""><i-v>One</i-v> </span><span i5_item="" iv_bound_component=""><i-v>Two</i-v> </span><span i5_item="" iv_bound_component=""><i-v>Three</i-v> </span>', 'BoundComponent template processed each line individually');
+            assert(comp22.innerHTML === '<span iv_bound_component=""><i-v>One</i-v> </span><span iv_bound_component=""><i-v>Two</i-v> </span><span iv_bound_component=""><i-v>Three</i-v> </span>', 'BoundComponent template processed each line individually');
 
             // Now test the ^ (parent) data source.
-            const comp22a = new BoundComponent<HTMLDivElement, { parentProperty: string, iter: string[] }>({ parentProperty: 'out of Three', iter: ['One', 'Two', 'Three'] }, `<div id="comp22a" i5_loop="iter"><span i5_item><i-v>.</i-v> <i-v>^parentProperty</i-v> </span></div>`
+            const comp22a = new BoundComponent<HTMLDivElement, { parentProperty: string, iter: string[] }>({ parentProperty: 'out of Three', iter: ['One', 'Two', 'Three'] }, `<div id="comp22a" i5_loop="iter"><span><i-v>.</i-v> <i-v>^parentProperty</i-v> </span></div>`
             ).appendToParent(this.testArea);
 
-            assert(comp22a.innerHTML === '<span i5_item="" iv_bound_component=""><i-v>One</i-v> <i-v>out of Three</i-v> </span><span i5_item="" iv_bound_component=""><i-v>Two</i-v> <i-v>out of Three</i-v> </span><span i5_item="" iv_bound_component=""><i-v>Three</i-v> <i-v>out of Three</i-v> </span>', 'BoundComponent loop contains reference to parent viewModel when referenced by ^');
+            assert(comp22a.innerHTML === '<span iv_bound_component=""><i-v>One</i-v> <i-v>out of Three</i-v> </span><span iv_bound_component=""><i-v>Two</i-v> <i-v>out of Three</i-v> </span><span iv_bound_component=""><i-v>Three</i-v> <i-v>out of Three</i-v> </span>', 'BoundComponent loop contains reference to parent viewModel when referenced by ^');
 
             // The i-v :source property lets you grab data from any boundComponent on the page, referenced by id
             const comp22b1 = new BoundComponent<HTMLSpanElement, string>("out of Three", { id: "comp22b1", type: "span" }).appendToParent(this.testArea);
-            const comp22b = new BoundComponent<HTMLDivElement, string[]>(['One', 'Two', 'Three'], `<div id="comp22b" i5_loop="."><span i5_item><i-v>.</i-v> <i-v :source="comp22b1">.</i-v> </span></div>`
+            const comp22b = new BoundComponent<HTMLDivElement, string[]>(['One', 'Two', 'Three'], `<div id="comp22b" i5_loop="."><span><i-v>.</i-v> <i-v :source="comp22b1">.</i-v> </span></div>`
             ).appendToParent(this.testArea);
-            assert(comp22b.innerHTML === '<span i5_item="" iv_bound_component=""><i-v>One</i-v> <i-v :source="comp22b1">out of Three</i-v> </span><span i5_item="" iv_bound_component=""><i-v>Two</i-v> <i-v :source="comp22b1">out of Three</i-v> </span><span i5_item="" iv_bound_component=""><i-v>Three</i-v> <i-v :source="comp22b1">out of Three</i-v> </span>', 'Data fetched from other component when referenced by :source');
+            assert(comp22b.innerHTML === '<span iv_bound_component=""><i-v>One</i-v> <i-v :source="comp22b1">out of Three</i-v> </span><span iv_bound_component=""><i-v>Two</i-v> <i-v :source="comp22b1">out of Three</i-v> </span><span iv_bound_component=""><i-v>Three</i-v> <i-v :source="comp22b1">out of Three</i-v> </span>', 'Data fetched from other component when referenced by :source');
 
             // The :source property also works for other custom attributes that are used to render the data (all but write targets)
             const comp22c = new BoundComponent<HTMLSpanElement, { passFail: string, falsy: boolean, style: string }>({ passFail: "PASSED", falsy: false, style: "text-decoration:underline;" }, { id: "comp22c", type: "span" }).appendToParent(this.testArea);
@@ -538,7 +538,7 @@ export class Test010 extends TestCaseView {
                 type: "div",
                 id: "comp22e",
                 properties: {
-                    innerHTML: '<div :item><i-v #comp22e>.</i-v></div>',
+                    innerHTML: '<div><i-v #comp22e>.</i-v></div>',
                 },
                 attributes: {
                     i5_source: "comp22c",
@@ -555,9 +555,9 @@ export class Test010 extends TestCaseView {
             // Of course, the component can be any class that inherits BoundComponent
             class LoopComponent2 extends BoundComponent<HTMLDivElement, string[]> { }
             const comp23a = new BoundComponent(['One', 'Two', 'Three'], {
-                outerHtml: `<div id="comp23a" i5_loop="."><span i5_item><i-v>.</i-v> </span></div>`
+                outerHtml: `<div id="comp23a" i5_loop="."><span><i-v>.</i-v> </span></div>`
             }).appendToParent(this.testArea);
-            assert(comp23a.content.querySelector('span[i5_item]')!.innerHTML === '<i-v>One</i-v> ', 'Successfully use derived class');
+            assert(comp23a.content.querySelector('span')!.innerHTML === '<i-v>One</i-v> ', 'Successfully use derived class');
 
             // In these cases, when you have a view class for the top-level component, you probably
             // don't want to use the default BoundComponent class for the loop items. Set the loopItemClass to
@@ -594,15 +594,15 @@ export class Test010 extends TestCaseView {
                 }
             }
             const comp23b = new LoopComponent2(['One', 'Two', 'Three'], new OuterHtmlBindingOptions({
-                outerHtml: `<div id="comp23b" i5_loop="."><span i5_item><i-v>.</i-v> </span></div>`,
+                outerHtml: `<div id="comp23b" i5_loop="."><span><i-v>.</i-v> </span></div>`,
                 loopItemClass: LoopComponent3,
                 async: false // Not using async render because it makes testing suck (this is default)
             })).appendToParent(this.testArea);
-            assert(comp23b.content.querySelector<HTMLElement>('span[i5_item]:nth-child(2)')!.dataset.id === '1', 'Successfully call constructor of derived class');
+            assert(comp23b.content.querySelector<HTMLElement>('span:nth-child(2)')!.dataset.id === '1', 'Successfully call constructor of derived class');
 
             loopcounter23b = 0;
             const comp23c = new LoopComponent2(['One', 'Two', 'Three'], new OuterHtmlBindingOptions({
-                outerHtml: `<div id="comp23c" i5_loop="."><span i5_item><i-v>.</i-v> </span></div>`,
+                outerHtml: `<div id="comp23c" i5_loop="."><span><i-v>.</i-v> </span></div>`,
                 loopItemClass: LoopComponent3,
                 defer: true
             })).appendToParent(this.testArea);
@@ -612,10 +612,10 @@ export class Test010 extends TestCaseView {
 
             // If you want to do nothing after creation, the easiest way is to supply an empty method, as in the example i5_loop:null="."
             const comp24 = new LoopComponent2(['One', 'Two', 'Three'], new OuterHtmlBindingOptions({
-                outerHtml: `<div id="comp24" i5_loop:null="."><span i5_item><i-v>.</i-v> </span></div>`,
+                outerHtml: `<div id="comp24" i5_loop:null="."><span><i-v>.</i-v> </span></div>`,
                 loopItemClass: LoopComponent3
             })).appendToParent(this.testArea);
-            assert(comp24.innerHTML === '<span i5_item=""><i-v>.</i-v> </span><span i5_item=""><i-v>.</i-v> </span><span i5_item=""><i-v>.</i-v> </span>', 'Null loop handler does not inject any component');
+            assert(comp24.innerHTML === '<span><i-v>.</i-v> </span><span><i-v>.</i-v> </span><span><i-v>.</i-v> </span>', 'Null loop handler does not inject any component');
 
             // At this time, I decided to add a way to access properties of the view, rather than the viewModel, by
             // prefixing them with "this." This would need to be in a derived class, because none of the methods
@@ -640,14 +640,14 @@ export class Test010 extends TestCaseView {
             }
 
             const comp25a = new LoopComponent2(['One', 'Two', 'Three'], new OuterHtmlBindingOptions({
-                outerHtml: `<div id="comp25a" i5_loop="."><span i5_item i5_attr:data-id="this.index"><i-v>.</i-v> </span></div>`,
+                outerHtml: `<div id="comp25a" i5_loop="."><span i5_attr:data-id="this.index"><i-v>.</i-v> </span></div>`,
                 loopItemClass: LoopComponent4
             })).appendToParent(this.testArea);
-            assert(comp25a.innerHTML === '<span i5_item="" i5_attr:data-id="this.index" iv_loop_component4=""><i-v>.</i-v> </span><span i5_item="" i5_attr:data-id="this.index" iv_loop_component4=""><i-v>.</i-v> </span><span i5_item="" i5_attr:data-id="this.index" iv_loop_component4=""><i-v>.</i-v> </span>', 'Render() not called automatically when "this." used.');
+            assert(comp25a.innerHTML === '<span i5_attr:data-id="this.index" iv_loop_component4=""><i-v>.</i-v> </span><span i5_attr:data-id="this.index" iv_loop_component4=""><i-v>.</i-v> </span><span i5_attr:data-id="this.index" iv_loop_component4=""><i-v>.</i-v> </span>', 'Render() not called automatically when "this." used.');
 
             // You can use fields without difficulty if async is true
             const comp25b = new LoopComponent2(['One', 'Two', 'Three'], new OuterHtmlBindingOptions({
-                outerHtml: `<div id="comp25b" i5_loop="."><span i5_item i5_attr:data-id="this.index"><i-v>this.index</i-v>: <i-v>.</i-v> </span></div>`,
+                outerHtml: `<div id="comp25b" i5_loop="."><span i5_attr:data-id="this.index"><i-v>this.index</i-v>: <i-v>.</i-v> </span></div>`,
                 loopItemClass: LoopComponent4,
                 async: true
             })).appendToParent(this.testArea);
@@ -665,7 +665,7 @@ export class Test010 extends TestCaseView {
                 }
             }
             const comp25c = new LoopComponent2(['One', 'Two', 'Three'], new OuterHtmlBindingOptions({
-                outerHtml: `<div id="comp25c" i5_loop="."><span i5_item i5_attr:data-id="this.index"><i-v>this.index</i-v>: <i-v>.</i-v> </span></div>`,
+                outerHtml: `<div id="comp25c" i5_loop="."><span i5_attr:data-id="this.index"><i-v>this.index</i-v>: <i-v>.</i-v> </span></div>`,
                 loopItemClass: LoopComponent5
             })).appendToParent(this.testArea);
             assert((document.querySelector('#comp25c span:nth-child(2)') as HTMLElement).dataset.id === '1', 'this.index can be accessed if render() called in constructor');
@@ -748,14 +748,12 @@ export class Test010 extends TestCaseView {
 
             // You can shortcut loops
             const short13 = new BoundComponent(['Short', 'Shorter', 'Shortest'],
-                `<div :loop="."><span i5_item><i-v>.</i-v></span></div>`
+                `<div :loop="."><span><i-v>.</i-v></span></div>`
             ).appendToParent(this.testArea);
 
             // The : shortcut is only intended to replace custom component attributes.
-            // But even though :item is just a selector, it's worth shortcutting for the sake of consistency.
-            // Handling : was a PITA though. Even though in HTML5, :item is a valid attribute, boy is the selector awful.
             const short14 = new BoundComponent(['Short', 'Shorter', 'Shortest'],
-                `<div :loop="."><span :item><i-v>.</i-v></span></div>`
+                `<div :loop="."><span><i-v>.</i-v></span></div>`
             ).appendToParent(this.testArea);
 
             // Ichigo makes heavy use of custom attributes, and purists might refuse to use it because all the attributes are
@@ -796,12 +794,12 @@ export class Test010 extends TestCaseView {
             assert(dataset11.value === 'Dataset 11', 'data-i5_input_value after');
 
             const dataset12 = new BoundComponent(['Short', 'Shorter', 'Shortest'],
-                `<div data-i5_loop="."><span i5_item><i-v>.</i-v></span></div>`
+                `<div data-i5_loop="."><span><i-v>.</i-v></span></div>`
             ).appendToParent(this.testArea);
 
             // Again, some extra complexity for the sake of consistency.
             const dataset13 = new BoundComponent(['Short', 'Shorter', 'Shortest'],
-                `<div data-i5_loop="."><span data-i5_item><i-v>.</i-v></span></div>`
+                `<div data-i5_loop="."><span><i-v>.</i-v></span></div>`
             ).appendToParent(this.testArea);
 
             // If you subscribe the render() method of the component to an observable's changes,
@@ -876,7 +874,7 @@ export class Test010 extends TestCaseView {
             const observableArr = ObservableProxy.proximate(['One', 'Two']);
             const observeComp7 = new BoundComponent(observableArr,
                 {
-                    outerHtml: `<div :loop="."><span class="observing" :item><i-v>.</i-v> </span></div>`,
+                    outerHtml: `<div :loop="."><span class="observing"><i-v>.</i-v> </span></div>`,
                     observeViewModel: true
                 }
             ).appendToParent(this.testArea);
@@ -899,8 +897,8 @@ export class Test010 extends TestCaseView {
             assert(fluency.content.getAttribute('bogus') === 'does-nothing', 'Update called forces a complete re-render');
 
             // Or call .render() at the end. It's a fluent API.
-            fluency.removeAttributeMapping('bogus').setLoop('list', '<div :item :text="."></div>').render();
-            assert(fluency.innerHTML === '<div :item="" :text="." iv_bound_component=""><i-v>World</i-v></div><div :item="" :text="." iv_bound_component=""><i-v>Underworld</i-v></div>', 'setLoop() replaces content with the provided loop');
+            fluency.removeAttributeMapping('bogus').setLoop('list', '<div :text="."></div>').render();
+            assert(fluency.innerHTML === '<div :text="." iv_bound_component=""><i-v>World</i-v></div><div :text="." iv_bound_component=""><i-v>Underworld</i-v></div>', 'setLoop() replaces content with the provided loop');
 
             // All these are setting render to true so the output is visible in the test area, but they don't need to be.
             fluency.setVisibility('trumpiness', false, true);
@@ -976,7 +974,7 @@ export class Test010 extends TestCaseView {
             // The following shouldn't throw. They won't do anything, but they shouldn't throw.
             const null1 = new BoundComponent(undefined, { element: createElement(elementType.HTMLDivElement, { innerHTML: 'Null-hello <i-v>name</i-v>' }) }).appendToParent(this.testArea);
             const null2 = new LoopComponent2(undefined as any, {
-                outerHtml: `<div id="null2" i5_loop="."><span i5_item><i-v>.</i-v> </span></div>`,
+                outerHtml: `<div id="null2" i5_loop="."><span><i-v>.</i-v> </span></div>`,
                 loopItemClass: LoopComponent3,
                 async: false // Not using async render because it makes testing suck (this is default)
             }).appendToParent(this.testArea);

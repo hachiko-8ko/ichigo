@@ -3,7 +3,7 @@ import { elementType } from '../Html/ElementType';
 import { escapeHtml } from '../Html/EscapeHtml';
 import { extractNodeContent } from '../Html/ExtractNodeContent';
 import { FormFieldValue, getFormFieldValue } from '../Html/FormFieldValue';
-import { nodeListSelectorAll } from '../Html/QuerySelectorNodeList';
+import { nodeListSelector, nodeListSelectorAll } from '../Html/QuerySelectorNodeList';
 import { IObservable, observableCheck } from '../Observable/IObservable';
 import { observablePropertyCheck } from '../Observable/ObservableProperty';
 import { observableStateCheck } from '../Observable/ObservableState';
@@ -673,10 +673,28 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
      * Override this if you need to do something else after the loop is added to the DOM.
      */
     protected loopPostProcess(row: any, addedContent: Node[], allRows: Iterable<any>, previousContent: DocumentFragment): void {
+        if (!addedContent.length) {
+            return;
+        }
+
         // If the typescript part of the following were important, this would be a problem
         // if this were a derived class.
         const thisclass = this;
-        (this._loopItemClass as typeof BoundComponent).injectBind(row, nodeListSelectorAll(addedContent, '[i5_item], [\\00003Aitem], [data-i5_item]'), {
+        const nodes = nodeListSelectorAll(addedContent, '[i5_item], [\\00003Aitem], [data-i5_item]');
+
+        // If no i5_item matches, then grab the first element.
+        if (!nodes.length) {
+            const firstNode = nodeListSelector(addedContent, '*');
+            if (firstNode) {
+                nodes.push(firstNode);
+            }
+        }
+
+        if (!nodes.length) {
+            return;
+        }
+
+        (this._loopItemClass as typeof BoundComponent).injectBind(row, nodes, {
             replace: false,
             loopParent: this,
             async: this._async

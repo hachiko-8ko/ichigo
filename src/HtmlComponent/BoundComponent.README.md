@@ -134,7 +134,27 @@ WARN: When the loop is rendered, the previous contents are discarded. This means
 Loop but do not call loopPostProcess() upon completion.
 
 * i5_item  
-Used to indicate a row item component in a loop. Currently used only as a selector by loopPostProcess() to convert it to a component.
+Used to indicate a row item component in a loop. Currently used only as an optional selector by loopPostProcess() to convert it to a component. Useful in the following scenario (note that it doesn't have a single top-level item to bind to, so it needs to bind to three per loop):
+```
+    <div i5_loop="iterable">
+        <!--- Everything inside here is repeated --->
+        <span i5_item><i-v>field1</i-v></span>
+        <span i5_item><i-v>field2</i-v></span>
+        <span i5_item><i-v>field3</i-v></span>
+    </div>
+```
+
+If i5_item is not found, loopPostProcess will grab the first element and make that the component, as in the following typical example:
+```
+    <div i5_loop="iterable">
+        <!--- Everything inside here is repeated --->
+        <div class="first_element">
+            <span><i-v>field1</i-v></span>
+            <span><i-v>field2</i-v></span>
+            <span><i-v>field3</i-v></span>
+        </div>
+    </div>
+```
 
 * i5_input  
 Used to indicate that input events on the component should call the BoundComponent.write() method, which writes to the properties specified in...

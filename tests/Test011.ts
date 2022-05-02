@@ -211,7 +211,7 @@ export class Test011 extends TestCaseView {
                 <div id="chat-example1" class="chat-example">
                     <h4>Example 1</h4> <!-- Misusing heading tags by jumping to H4-->
                     <div :loop="chats" class="component chat-list">
-                        <div :item>
+                        <div>
                             <div>#<i-v>id</i-v> From:<i-v>fromName</i-v> at <i-v>created</i-v>. <i-v>subject</i-v></div>
                             <div><i-v>stripped</i-v></div>
                         </div>
@@ -355,7 +355,7 @@ export class Test011 extends TestCaseView {
                     super(viewModel, {
                         outerHtml: `
                         <div :loop="chats" class="component chat-list">
-                            <div :item>
+                            <div>
                                 <div>#<i-v>id</i-v> From:<i-v>fromName</i-v> at <i-v>created</i-v>. <i-v>subject</i-v></div>
                                 <div><i-v>stripped</i-v></div>
                             </div>
@@ -517,7 +517,7 @@ export class Test011 extends TestCaseView {
                         element: parent.querySelector<HTMLDivElement>('.chat-list')!,
                         properties: {
                             innerHTML: `
-                            <div :item>
+                            <div>
                                 <div>#<i-v>id</i-v> From:<i-v>fromName</i-v> at <i-v>created</i-v>. <i-v>subject</i-v></div>
                                 <div><i-v>stripped</i-v></div>
                             </div>`
@@ -695,7 +695,7 @@ export class Test011 extends TestCaseView {
                         type: elementType.HTMLDivElement,
                         properties: {
                             innerHTML: `
-                            <div :item>
+                            <div>
                                 <div>#<i-v>id</i-v> From:<i-v>fromName</i-v> at <i-v>created</i-v>. <i-v>subject</i-v></div>
                                 <div><i-v>stripped</i-v></div>
                             </div>`
@@ -925,7 +925,7 @@ export class Test011 extends TestCaseView {
 
                     this.list = new BoundComponent<HTMLDivElement, ChatListViewModel>(this.viewModel)
                         .addClass('component chat-list')
-                        .setLoop('chats', `<div :item>
+                        .setLoop('chats', `<div>
                             <div>#<i-v>id</i-v> From:<i-v>fromName</i-v> at <i-v>created</i-v>. <i-v>subject</i-v></div>
                             <div><i-v>stripped</i-v></div>
                         </div>`)
