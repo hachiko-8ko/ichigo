@@ -7,7 +7,6 @@ import { IInnerHtmlOptions } from './IInnerHtmlOptions';
 import { IOuterHtmlOptions } from './IOuterHtmlOptions';
 
 export interface IComponentBindingOptions<TModel = any, TItem extends BoundComponent<HTMLElement, any> = BoundComponent<HTMLElement, any>> {
-    name?: string;
     async?: boolean; // Execute render asynchronously. There will be a brief FOUC (flash of unprocessed content)
     defer?: boolean; // Do not execute render during construction. There will be a very brief FOUC
     observeViewModel?: boolean;
@@ -25,7 +24,6 @@ export interface IComponentBindingOptions<TModel = any, TItem extends BoundCompo
  * the object you provided doesn't include the various properties of the string object, which isn't helpful.
  */
 export abstract class ComponentBindingOptions<TModel = any, TItem extends BoundComponent<HTMLElement, any> = BoundComponent<HTMLElement, any>> implements IComponentBindingOptions<TModel, TItem> {
-    name?: string;
     async?: boolean; // Execute render asynchronously. There will be a brief FOUC (flash of unprocessed content)
     defer?: boolean; // Do not execute render during construction. There will be a very brief FOUC
     observeViewModel?: boolean;

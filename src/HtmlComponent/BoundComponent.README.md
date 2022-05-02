@@ -29,7 +29,20 @@ The replacement value is HTML escaped.  If you want to keep the raw unescaped HT
 
 After original loading, the i-v tags will be repurposed from storing the *definition* to storing the *data*.  This allows reloading of replacement values by events without breaking references to non-replaced DOM objects (which is what would happen if you updated innerHTML using "&lt;div id='referenced'&gt;{{ name }}&lt;/div&gt;" without a lot of extra work).
 
-I recommend that you do not nest templates (have templates whose value is another template). Remember, i-v tags can be reloaded if instructed, which will destroy any inside DOM objects that are referenced, and this includes the inner i-v tags.  While it's possible to, for example, have one template return the format and then have the inner template return the data ... I did it as a test and it worked ... the timing issues are ugly and it's not worth doing it just to be cute.
+I recommend that you do not nest templates inside other ones. If you do, you need to bind them in order from outermost to innermost for references to be kept. The way it works is it takes a text template, builds elements, and puts down the entire content, wiping out whatever came before. Replacements replace only those small changing sections, not the entire text, by storing references to them. References which are removed from the page if you replace all the content. If you want to update these replaces based on an event, for example, you must build the outer content first, then inner.
+
+I *really* recommend that you do not nest templates inside i-v tags (where the value is another template). Remember, i-v tags can be reloaded if instructed, which will destroy any inside DOM objects that are referenced, and this includes the inner i-v tags.  While it's possible to, for example, have one template return the format and then have the inner template return the data ... I did it as a test and it worked ... the timing issues are ugly and it's not worth doing it just to be cute.
+
+By default, when binding a component, it will snap up any i-v elements it sees. This could create a problem in this example of nested components:
+> `<component1> <i-v>name</i-v> <component2> <i-v>childName</i-v> </component2> </component1>`
+
+Which does childName belong with? Is the data in component 1 or 2?  In this case, it's 2. This isn't something that is a problem in, say, angular, because each component is stored in a separate file. It's clean, it's clearly delimited, and it requires a custom build process. We don't have that here. In Ichigo, you reference the id, like so (pick your favorite version):
+
+> `<component1 id=component1> <i-v>name</i-v> <component2 id=component2> <i-v #component2>childName</i-v> </component2> </component1>`
+> `<component1 id=component1> <i-v>name</i-v> <component2 id=component2> <i-v component="component2">childName</i-v> </component2> </component1>`
+> `<component1 id=component1> <i-v>name</i-v> <component2 id=component2> <i-v data-component="component2">childName</i-v> </component2> </component1>`
+
+This is a case-insensitive test.
 
 ## Custom Attributes
 
@@ -53,9 +66,6 @@ Example: referencing a component property:
 Even though propertyName looks like code that can be evaluated, it is just a simple name lookup.  You cannot access more complicated properties like this.callMethod().name.toLowerCase() like you can attempt in Angular.
 
 And if you wanted an insane viewmodel like { ["this.wtf"] = "WTF" }, sorry.
-
-* i5_name="a component name"  
-When name is specified, either by passing as constructor options or by using i5_name, then only i-v tags that contain a custom attribute matching that name are replaced (names should only include valid characters for attributes). In this example, unlabeled &lt;i-v&gt; are untouched, but &lt;i-v a_component_name&gt; are updated.
 
 * i5_text="propertyName"  
 Set innerHTML equal to the value of propertyName, escaping HTML.

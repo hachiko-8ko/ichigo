@@ -109,7 +109,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
     viewModel: TModel;
     loopParent?: TParent; // only sent when this is a component child creted by loopPostProcess
 
-    private _name?: string;
+    private _id?: string;
     private _attributeBindings: Array<{ attribute: string, source: string, bool: boolean, negative: boolean }> = [];
     private _valueAttribute?: string;
     private _writeTargets: string[] = [];
@@ -161,7 +161,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
 
         this._async = options.async || false;
         this._defer = options.defer || false;
-        this._name = options.name;
+        this._id = this.content.id;
 
         // Defined the default component class for the default loopPostProcess() method
         if (options.loopItemClass) {
@@ -426,18 +426,30 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
 
         // Working on a clone here, so we don't see the body being built step by step in the browser.
         for (const repl of clone.querySelectorAll('i-v')) {
-            // This is a possible error scenario: Attribute does not have a name but contains possibly named i-v tags.
-            // It's only "possible" because there could be other reasons for it (such as 'disabled').
-            // To try and filter out the obvious cases, such as class and style, don't count non-boolean attributes that have values.
-            if (!this._name && repl.attributes.length > 0 && Array.from(repl.attributes).filter(f => f.name !== 'noescape' && !f.value).length) {
-                // tslint:disable-next-line:no-console
-                console.warn(`Unnamed component #${this.content.id} contains possibly named I-V replacement intended for another component: <i-v ${Array.from(repl.attributes).filter(f => f.name !== 'noescape' && !f.value)[0].name}>${repl.innerHTML}</i-v>`);
+
+            // Allow 3 ways to reference a component, either by #id (for people who like quickness), by component (for people who like
+            // compliance), or by data-component (for people who REALLY like compliance)
+            let relatedComponentId = '';
+            // tslint:disable-next-line:prefer-for-of
+            for (let i = 0; i < repl.attributes.length; i++) {
+                const tmpName = repl.attributes[i].nodeName;
+                if (tmpName.startsWith('#')) {
+                    relatedComponentId = tmpName.slice(1);
+                    break;
+                }
+            }
+            if (!relatedComponentId && repl.hasAttribute('component')) {
+                relatedComponentId = (repl.getAttribute('component') || '');
+            }
+            if (!relatedComponentId) {
+                relatedComponentId = (repl as HTMLElement).dataset.component || '';
             }
 
-            // If name is specified, i-v tag MUST have that as a tag.
-            if (this._name && !repl.hasAttribute(this._name)) {
+            // If component is specified, this component must have that as an id
+            if (this._id && relatedComponentId && relatedComponentId.toLowerCase() !== this._id.toLowerCase()) {
                 continue;
             }
+
             const noescape = repl.hasAttribute('noescape') && repl.getAttribute('noescape') !== 'false';
             this._replacements.push({
                 element: repl as HTMLElement,
@@ -780,9 +792,6 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
                 continue;
             }
             switch (type.type) {
-                case "name":
-                    this._name = this._name || prop.value;
-                    break;
                 case "boolNegative":
                     negative = true;
                 // fall through
