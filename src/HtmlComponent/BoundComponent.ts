@@ -108,6 +108,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
 
     viewModel: TModel;
     loopParent?: TParent; // only sent when this is a component child creted by loopPostProcess
+    paused = false;
 
     private _id?: string;
     private _attributeBindings: Array<{ attribute: string, source: string, bool: boolean, negative: boolean, otherComponentId?: string }> = [];
@@ -314,6 +315,11 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
     }
 
     render(): this {
+        // If we pause rendering, then nothing happens.
+        if (this.paused) {
+            return this;
+        }
+
         // See if we need to defer rendering until after initialization
         if (this._defer && !this._initialized) {
             return this;
