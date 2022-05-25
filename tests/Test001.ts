@@ -117,8 +117,7 @@ export class Test001 extends TestCaseView<TestViewModel> {
             }
 
         } catch (err) {
-            this.log("ERROR: " + err);
-            throw err;
+            this.log(err.toString());
         }
     }
 }

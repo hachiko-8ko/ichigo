@@ -92,8 +92,7 @@ export class Test006 extends TestCaseView {
             this.log('Async test initiated (1 test set).');
 
         } catch (err) {
-            this.log("ERROR: " + err);
-            throw err;
+            this.log(err.toString());
         }
 
         // Testing async stuff is super annoying
@@ -121,7 +120,6 @@ export class Test006 extends TestCaseView {
                 this.log(`TEST ${this.viewModel.testNumber}: Test successful`);
             } catch (err) {
                 this.log('ERROR: ' + err);
-                throw err;
             }
         }, 1000);
     }

@@ -167,8 +167,7 @@ export class Test004 extends TestCaseView {
 
                     this.log(`TEST ${this.viewModel.testNumber}: Test set 1 successful.`);
                 } catch (err) {
-                    this.log("ERROR: " + err);
-                    throw err;
+                    this.log(err.toString());
                 }
             }, 10);
 
@@ -205,14 +204,12 @@ export class Test004 extends TestCaseView {
 
                     this.log(`TEST ${this.viewModel.testNumber}: Test set 2 successful.`);
                 } catch (err) {
-                    this.log("ERROR: " + err);
-                    throw err;
+                    this.log(err.toString());
                 }
             }, 1000);
 
         } catch (err) {
-            this.log("ERROR: " + err);
-            throw err;
+            this.log(err.toString());
         }
     }
 }

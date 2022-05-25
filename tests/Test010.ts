@@ -989,13 +989,11 @@ export class Test010 extends TestCaseView {
             asyncAsserts.then(() => this.log(`TEST ${this.viewModel.testNumber}: Async tests succeeded`));
             asyncAsserts.catch(err => {
                 this.log('ASYNC TESTS FAILED: ' + err.message);
-                throw (err);
             });
             asyncAsserts.resolve();
 
         } catch (err) {
-            this.log("ERROR: " + err);
-            throw err;
+            this.log(err.toString());
         }
     }
 }

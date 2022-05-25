@@ -10,7 +10,7 @@ class TestViewModel extends TestCaseViewModel {
             name: 'Test the TestCase base classes',
             descriptionHtml: `<p>This test case base class runs tests and outputs stuff to the console, which can be
             included in the actual page (so it's not necessary to open the dev tools console, though
-            that's still pretty useful.)</p>
+            that's still pretty useful).</p>
             <p>If you don't see "Test successful," then it failed, with an error in the log. Hard to
             show the log in the page if the page is broken, so have to check the log after all.</p>`
         });
@@ -38,14 +38,12 @@ export class Test000 extends TestCaseView {
                     assert(logElement.innerHTML.includes("Hello world."), "Log should update the page.");
                     this.log(`TEST ${this.viewModel.testNumber}: Test successful`);
                 } catch (err) {
-                    this.log("ERROR: " + err);
-                    throw err;
+                    this.log(err.toString());
                 }
             }, 100);
 
         } catch (err) {
-            this.log("ERROR: " + err);
-            throw err;
+            this.log(err.toString());
         }
     }
 }

@@ -176,8 +176,7 @@ export class Test012 extends TestCaseView {
 
             this.log(`TEST ${this.viewModel.testNumber}: Sync Test successful`);
         } catch (err) {
-            this.log("ERROR: " + err);
-            throw err;
+            this.log(err.toString());
         }
     }
 }

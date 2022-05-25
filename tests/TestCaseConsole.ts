@@ -13,7 +13,7 @@ export class ConsoleView extends Component<HTMLDivElement>{
             innerHtml: `
                 <h2>Log</h2>
                 <div id="consoleLog" :loop="output">
-                    <div :item><i-v>.</i-v></div>
+                    <div><i-v>.</i-v></div>
                 </div>`
         });
         this.viewModel = new ConsoleViewModel();

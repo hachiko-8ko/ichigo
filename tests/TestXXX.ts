@@ -20,8 +20,7 @@ export class TestXXX extends TestCaseView {
         try {
 
         } catch (err) {
-            this.log("ERROR: " + err);
-            throw err;
+            this.log(err.toString());
         }
     }
 }

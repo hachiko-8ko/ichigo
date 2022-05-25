@@ -222,8 +222,7 @@ export class Test007 extends TestCaseView {
             });
             asyncAsserts.resolve();
         } catch (err) {
-            this.log("ERROR: " + err);
-            throw err;
+            this.log(err.toString());
         }
     }
 }

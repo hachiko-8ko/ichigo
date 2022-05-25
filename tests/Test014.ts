@@ -234,8 +234,7 @@ export class Test014 extends TestCaseView {
             this.log(`Test ${this.viewModel.testNumber}: Test successful`);
 
         } catch (err) {
-            this.log("ERROR: " + err);
-            throw err;
+            this.log(err.toString());
         }
     }
 }

@@ -74,8 +74,7 @@ export class Test013 extends TestCaseView {
             });
 
         } catch (err) {
-            this.log("ERROR: " + err);
-            throw err;
+            this.log(err.toString());
         }
     }
 }
