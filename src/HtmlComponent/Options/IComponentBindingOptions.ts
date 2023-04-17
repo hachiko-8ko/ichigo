@@ -9,11 +9,8 @@ import { IOuterHtmlOptions } from './IOuterHtmlOptions';
 export interface IComponentBindingOptions<TModel = any, TItem extends BoundComponent<HTMLElement, any> = BoundComponent<HTMLElement, any>> {
     async?: boolean; // Execute render asynchronously. There will be a brief FOUC (flash of unprocessed content)
     defer?: boolean; // Do not execute render during construction. There will be a very brief FOUC
-    observeViewModel?: boolean;
-    observeAllViewModel?: boolean;
-    observeTargets?: IObservable[];
-    observeAllTargets?: any[];
     loopItemClass?: Constructable<TItem>;
+    doNotSubscribe?: boolean;
 }
 
 // tslint:disable:max-classes-per-file
@@ -26,10 +23,6 @@ export interface IComponentBindingOptions<TModel = any, TItem extends BoundCompo
 export abstract class ComponentBindingOptions<TModel = any, TItem extends BoundComponent<HTMLElement, any> = BoundComponent<HTMLElement, any>> implements IComponentBindingOptions<TModel, TItem> {
     async?: boolean; // Execute render asynchronously. There will be a brief FOUC (flash of unprocessed content)
     defer?: boolean; // Do not execute render during construction. There will be a very brief FOUC
-    observeViewModel?: boolean;
-    observeAllViewModel?: boolean;
-    observeTargets?: IObservable[];
-    observeAllTargets?: any[];
     loopItemClass?: Constructable<TItem>;
     replace?: boolean;
 

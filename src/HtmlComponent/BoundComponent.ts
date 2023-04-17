@@ -4,7 +4,7 @@ import { escapeHtml } from '../Html/EscapeHtml';
 import { extractNodeContent } from '../Html/ExtractNodeContent';
 import { FormFieldValue, getFormFieldValue } from '../Html/FormFieldValue';
 import { nodeListSelector, nodeListSelectorAll } from '../Html/QuerySelectorNodeList';
-import { IObservable, observableCheck } from '../Observable/IObservable';
+import { observableCheck } from '../Observable/IObservable';
 import { observablePropertyCheck } from '../Observable/ObservableProperty';
 import { observableStateCheck } from '../Observable/ObservableState';
 import { Constructable, constructorTypeGuard } from '../System/Types/Constructable';
@@ -19,6 +19,7 @@ import { IOuterHtmlOptions } from './Options/IOuterHtmlOptions';
 import { IComponentBindingOptions } from './Options/IComponentBindingOptions';
 import { Kwarg, kw } from '../System/Types/KeywordArguments';
 import { e_ } from '../System/Utility/Elvis';
+import { EventHub } from '../System/EventHandler/EventHub';
 
 // This is only passed by loopPostProcess(), unless you write your own component class that does differently.
 export interface ILoopParent<TParent extends BoundComponent<HTMLElement, any> = BoundComponent<HTMLElement, any>> {
@@ -183,23 +184,9 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
 
         this.setTemplate(this.content.innerHTML); // InnerHTML is currently only parsed and then the original text is thrown away.
 
-        // Auto-add subscriptions based on settings.
-        if (options.observeAllViewModel) {
-            this.observeAll();
-        } else if (options.observeViewModel) {
-            this.observe();
+        if (!options.doNotSubscribe) {
+            this.observe(this.viewModel, true);
         }
-        if (options.observeTargets) {
-            for (const tgt of options.observeTargets) {
-                this.observe(tgt);
-            }
-        }
-        if (options.observeAllTargets) {
-            for (const tgt of options.observeAllTargets) {
-                this.observeAll(tgt);
-            }
-        }
-
         if (this._async) {
             setTimeout(() => this.render(), 0);
         } else {
@@ -283,32 +270,38 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
     }
 
     /**
-     * Bind this.render() to the model passed in, or the view model if none passed in.
+     * Bind this.render() to the model passed in. There is no option to use the viewModel because that would require
+     * the user to pass in doNotSubscribe = true and then subscribe it to the exact same thing. It'd be stupid.
+     *
+     * If useCurrentChannel is true, then if the model isn't an observable,
+     * the current channel is used instead.
      */
-    observe(model?: any): this {
-        model = model || this.viewModel as any;
-
+    observe(model: any, useCurrentChannel: boolean = false): this {
+        // If the view model is observable, sub to its channel. Otherwise, sub to the current/main channel.
         if (observableCheck(model)) {
             model.subscribe(this.render, this);
+        } else if (useCurrentChannel) {
+            EventHub.subscribe(this.render, this);
         }
 
         return this;
     }
 
     /**
-     * Bind this.render() to all observable properties found in the model passed in,
-     * or the view model if none passed in. This only goes one level deep, so it
-     * won't pick up nested objects, but it's probably good enough in 60% of cases.
+     * Bind this.render() to all observable properties found in the model passed in, or the viewModel if none.
+     *
+     * If useCurrentChannel is true, then if the model isn't an observable,
+     * the current channel is used instead.
      */
-    observeAll(model?: any): this {
-        model = model || this.viewModel as any;
+    observeAll(model?: any, useCurrentChannel: boolean = false): this {
+        model = model || this.viewModel;
 
         if (!model) {
             return this;
         }
-        this.observe(model);
+        this.observe(model, useCurrentChannel);
         for (const m of Object.getOwnPropertyNames(model)) {
-            this.observe(model[m]);
+            this.observe(model[m], useCurrentChannel);
         }
 
         return this;

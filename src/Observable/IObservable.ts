@@ -1,30 +1,19 @@
-import { RepeatablePromise } from '../System/Async/RepeatablePromise';
-import { Delegate } from '../System/EventHandler/Delegate';
-import { EventHandler } from '../System/EventHandler/EventHandler';
 import { IAction1 } from '../System/Types/DelegateInterfaces';
-import { IDisposable } from '../System/Types/IDisposable';
-import { RecursiveArray } from '../System/Types/RecursiveArray';
+import { EventHandler } from '../System/EventHandler/EventHandler';
+import { IEventChannel } from '../System/EventHandler/EventHub';
 
 /**
  * A class that can notify listeners of changes, typically changes to fields and properties, but
  * other changes are allowed. It's a very general type of event, which is why the args are any object.
  */
-export interface IObservable extends IDisposable {
-    changeHandler: EventHandler<any>;
-    sendChangeEventsTo(forwardTo: IObservable): void;
-    receiveChangeEventsFrom(bubbleFrom: IObservable): void;
-    subscribe(delegate: RecursiveArray<Delegate>): void;
-    subscribe(callback: IAction1<any>, thisArg?: any): RepeatablePromise | undefined;
-    subscribe(callback: IAction1<any> | RecursiveArray<Delegate>, thisArg?: any): RepeatablePromise | undefined;
+export interface IObservable<TArgs = any> {
+    subscribe(callback: IAction1<TArgs>, thisArg?: any): void;
 
-    unsubscribeCallback(callback: IAction1<any>): void;
-
-    unsubscribeSender(sender: any): void;
-
-    unsubscribeDelegate(delegate: RecursiveArray<Delegate>): void;
+    unsubscribe(thisArg: any): void;
+    unsubscribe(callback: IAction1<TArgs>, thisArg?: any): void;
 }
 
 export function observableCheck(obj: any): obj is IObservable {
     // Not an exhaustive test but it's the important bit.
-    return obj && typeof obj === 'object' && 'changeHandler' in obj && obj.changeHandler instanceof EventHandler;
+    return obj && typeof obj === 'object' && '_eventChannel' in obj && "eventHandler" in obj._eventChannel && obj._eventChannel.eventHandler instanceof EventHandler;
 }

@@ -34,8 +34,6 @@ export * from "./Observable/ObservableState";
 
 export * from "./Router/IRoute";
 export * from "./Router/PageRouter";
-export * from "./Router/IAdvancedRoute";
-export * from "./Router/AdvancedPageRouter";
 export * from "./Router/IRouteGuard";
 
 export * from "./System/Async/DynamicWebWorker";
@@ -47,8 +45,8 @@ export * from './System/Collections/ArrayUtilities';
 export * from './System/Collections/OrderBy';
 
 export * from './System/EventHandler/ArrayChangedEventArgs';
-export * from './System/EventHandler/Delegate';
 export * from './System/EventHandler/EventHandler';
+export * from './System/EventHandler/EventHub';
 export * from './System/EventHandler/PropertyChangedEventArgs';
 
 export * from './System/Types/Constructable';

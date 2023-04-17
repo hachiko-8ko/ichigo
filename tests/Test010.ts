@@ -76,7 +76,6 @@ class TestViewModel extends TestCaseViewModel {
                 addWriteEvent(): this;
                 addWriteTarget(target?: string, update?: boolean): this;
                 removeWriteTarget(target: string, update?: boolean): this;
-                dispose(): void;
                 protected loopPostProcess(row: any, addedContent: Node[], allRows: Iterable<any>, previousContent: DocumentFragment): void;
             }
             </code></pre>
@@ -809,73 +808,47 @@ export class Test010 extends TestCaseView {
             // If the view model is an observable, you can observe it simply by
             // passing observeViewModel: true in the component options.
             class ObservableViewModel extends ObservableBase {
-                name = new ObservableProperty<string>("World", { name: "name", forwardTo: this });
+                name = new ObservableProperty<string>("World", { name: "name", eventChannel: "VM1" });
             }
-            const observableViewModel = new ObservableViewModel({ name: "VM" });
+            const observableViewModel = new ObservableViewModel("VM1");
             const observeComp1 = new BoundComponent(observableViewModel, {
-                innerHtml: 'Hello <i-v>name</i-v>',
-                observeViewModel: true
+                innerHtml: 'Hello <i-v>name</i-v>'
             }).appendToParent(this.testArea);
             assert(observeComp1.innerHTML === 'Hello <i-v>World</i-v>', 'Component shows initial value before update');
             setTimeout(() => {
                 observableViewModel.name.value = "Neptune";
             }, 500);
-            asyncAsserts.then(() => assert(observeComp1.innerHTML === 'Hello <i-v>Neptune</i-v>', 'Render() called when observing viewModel, if property is forwarded.'));
+            asyncAsserts.then(() => assert(observeComp1.innerHTML === 'Hello <i-v>Neptune</i-v>', 'Render() called when observing viewModel, if using the same channel.'));
 
             // You can also observe each individual property of a view model, which is useful when the VM itself is a dumb object. Which
             // is generally better, in my opinion. Simpler chain of responsibility.
             class MoreTypicalViewModel {
-                name = new ObservableProperty<string>("World");
+                name = new ObservableProperty<string>("World", "typicalVM");
             }
             const dumbViewModel = new MoreTypicalViewModel();
             const observeComp2 = new BoundComponent(dumbViewModel, {
-                innerHtml: 'Hello <i-v>name</i-v>',
-                observeAllViewModel: true
+                innerHtml: 'Hello <i-v>name</i-v>'
             }).appendToParent(this.testArea);
+            observeComp2.observeAll();
             assert(observeComp2.innerHTML === 'Hello <i-v>World</i-v>', 'Component shows initial value before update #2');
             setTimeout(() => {
                 dumbViewModel.name.value = "Mars";
             }, 600);
             asyncAsserts.then(() => assert(observeComp2.innerHTML === 'Hello <i-v>Mars</i-v>', 'Render() called when observing all observable properties of a dumb view model'));
 
-            // Of course, you can manually specify the observers (same as observeViewModel).
+            // Of course, you can manually specify the observers
             const observeComp3 = new BoundComponent(dumbViewModel, {
-                innerHtml: 'Hello <i-v>name</i-v> #2',
-                observeTargets: [dumbViewModel.name]
-            }).appendToParent(this.testArea);
-            asyncAsserts.then(() => assert(observeComp3.innerHTML === 'Hello <i-v>Mars</i-v> #2', 'Render() called when observing observable properties on a dumb view model explicitly'));
-
-            // Or manually specify the parent of observers (same as observeAllViewModel)
-            const observeComp4 = new BoundComponent(dumbViewModel, {
-                innerHtml: 'Hello <i-v>name</i-v> #3',
-                observeAllTargets: [dumbViewModel]
-            }).appendToParent(this.testArea);
-            asyncAsserts.then(() => assert(observeComp4.innerHTML === 'Hello <i-v>Mars</i-v> #3', 'Render() called when observing all observable properties of a list of dumb view models'));
-
-            // Or if complete manual assignment is your thing, you don't need to use the helpers.
-            const observeComp5 = new BoundComponent(observableViewModel, {
                 innerHtml: 'Hello <i-v>name</i-v> #2'
             }).appendToParent(this.testArea);
-            // This is the same as calling
-            // observeComp5.viewModel.subscribe(observeComp5.render, observeComp5)
-            observeComp5.observe();
-            asyncAsserts.then(() => assert(observeComp5.innerHTML === 'Hello <i-v>Neptune</i-v> #2', 'Render() called when the observe() method is called'));
-
-            const observeComp6 = new BoundComponent(dumbViewModel, {
-                innerHtml: 'Hello <i-v>name</i-v> #4'
-            }).appendToParent(this.testArea);
-            // This is the same as calling
-            // observeComp6.viewModel.subscribe(observeComp5.render, observeComp5.name)
-            observeComp6.observeAll();
-            asyncAsserts.then(() => assert(observeComp6.innerHTML === 'Hello <i-v>Mars</i-v> #4', 'Render() called when the observeAll() method is called'));
+            observeComp3.observe(dumbViewModel.name);
+            asyncAsserts.then(() => assert(observeComp3.innerHTML === 'Hello <i-v>Mars</i-v> #2', 'Render() called when observing observable properties on a dumb view model explicitly'));
 
             // The VM doesn't matter as long as it's observable. The process is the same for an array.
             // In this case, the array is the view model, so pass observeViewModel to true.
             const observableArr = ObservableProxy.proximate(['One', 'Two']);
             const observeComp7 = new BoundComponent(observableArr,
                 {
-                    outerHtml: `<div :loop="."><span class="observing"><i-v>.</i-v> </span></div>`,
-                    observeViewModel: true
+                    outerHtml: `<div :loop="."><span class="observing"><i-v>.</i-v> </span></div>`
                 }
             ).appendToParent(this.testArea);
             assert(Array.from(observeComp7.content.querySelectorAll('.observing')).length === 2, 'Array length before updating.');
@@ -963,10 +936,9 @@ export class Test010 extends TestCaseView {
             // State observables are similar, but keep in mind a few things.
             // Most importantly, you should observe the view model itself, never the sub-objects, which are just parts of the overall state.
             // Also, you are a bit limited in the complexity of your object.
-            const stateObservable = new ObservableState<typeof basicViewModel>(basicViewModel);
+            const stateObservable = new ObservableState<typeof basicViewModel>(basicViewModel, 'stateVM');
             const observeComp8 = new BoundComponent(stateObservable, {
-                innerHtml: 'Hello <i-v>lastListItem</i-v>',
-                observeViewModel: true
+                innerHtml: 'Hello <i-v>lastListItem</i-v>'
             }).appendToParent(this.testArea);
             asyncAsserts.then(() => assert(observeComp8.innerHTML === 'Hello <i-v>Middle Earth</i-v>', 'Render() called with setState()'));
             stateObservable.setState({ list: ['World', 'Underworld', 'Middle Earth'] });
@@ -979,8 +951,7 @@ export class Test010 extends TestCaseView {
                 async: false // Not using async render because it makes testing suck (this is default)
             }).appendToParent(this.testArea);
             const null3 = new BoundComponent(undefined, {
-                innerHtml: 'Null-hello <i-v>name</i-v>',
-                observeViewModel: true
+                innerHtml: 'Null-hello <i-v>name</i-v>'
             }).appendToParent(this.testArea);
 
             this.log(`TEST ${this.viewModel.testNumber}: Sync test successful`);

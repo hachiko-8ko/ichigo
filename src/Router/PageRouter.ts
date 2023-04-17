@@ -7,6 +7,7 @@ import { Constructable, constructorTypeGuard } from '../System/Types/Constructab
 import { Kwarg } from '../System/Types/KeywordArguments';
 import { isNone, Nullable } from '../System/Types/NoneType';
 import { IRoute } from './IRoute';
+import { EventHub } from '../System/EventHandler/EventHub';
 
 /**
  * If you click a link in a real web site, the browser asks the server for a page and it routes you to the relevant
@@ -300,6 +301,11 @@ export class PageRouter {
 
         // Note if you change the location bar, Chrome forces a reload of Program.ts, nothing you can do
         // about it because Chrome is the one that discarded your state.
+
+        // Delete event channels from the previous page.
+        // TODO: Is there any reason why this should be configurable?
+        // TODO: Store channels in a weakmap tied to an element of type i5-channel-hub so this won't be necessary
+        EventHub.clear();
 
         let container = this.routeContainer;
         const keepLayout = route.layout && previous && route.staticLayout && route.layout === previous.layout;

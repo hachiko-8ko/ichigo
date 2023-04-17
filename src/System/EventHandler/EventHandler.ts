@@ -1,9 +1,6 @@
-import { traverse } from '../Collections/ArrayUtilities';
-import { IAction1 } from '../Types/DelegateInterfaces';
-import { IDisposable } from '../Types/IDisposable';
+import { IAction1, IPredicate1 } from '../Types/DelegateInterfaces';
 import { RepeatablePromise } from '../Async/RepeatablePromise';
-import { Delegate } from './Delegate';
-import { RecursiveArray } from '../Types/RecursiveArray';
+import { Delegate } from './Internal/Delegate';
 
 /**
  * I chose to use C# style events, not JS/TS, because the JS/TS way of doing delegates/custom events is a NIGHTMARE. Sure,
@@ -20,106 +17,45 @@ import { RecursiveArray } from '../Types/RecursiveArray';
  * But if you're triggering async events in code and stepping through it in Chrome, what you see won't make sense, because the async
  * events won't occur until right away. It can be hard to troubleshoot.
  */
-// tslint:disable-next-line:ban-types
-export class EventHandler<TArgs = any> implements IDisposable {
-    delegate: RecursiveArray<Delegate> = [];
+export class EventHandler<TArgs = any> {
+    protected _delegates: Delegate[] = [];
 
-    constructor(private _disableAsync: boolean = false) { }
-
-    subscribe(delegate: RecursiveArray<Delegate>): void;
-    subscribe(callback: IAction1<TArgs>, thisArg?: any): RepeatablePromise | undefined;
-    subscribe(callback: IAction1<TArgs> | RecursiveArray<Delegate>, thisArg?: any): RepeatablePromise | undefined {
-        // If this receives a delegate (which is an array of delegates), add it.
-        // When this is invoked, that delegate will also be invoked.
-        if (Array.isArray(callback)) {
-            _ovr1_delegate.call(this, callback);
-            return;
-        }
-
-        // Got a single callback
-
+    subscribe(callback: IAction1<TArgs>, thisArg?: any): void {
         // Only allow a single instance of the same callback.
         if (this.find({ callback, thisArg, firstMatch: true }).length) {
             return;
         }
+        this._delegates.push(new Delegate(callback, thisArg));
+    }
 
-        const newDele = new Delegate(callback, thisArg);
-        this.delegate.push(newDele);
-
-        // IF this is asynchronous, return the promise so it can be chained.
-        // Chaining won't work on sync code, so do not in that case.
-        if (!this._disableAsync) {
-            return newDele.promise;
-        }
-
-        function _ovr1_delegate(this: EventHandler, delegate: RecursiveArray<Delegate>): void {
-            // Only allow a single instance of the same delegate.
-            if (this.delegate.find(q => q === delegate)) {
-                return;
-            }
-            this.delegate.push(delegate);
-            return;
+    unsubscribe(thisArg: any): void;
+    unsubscribe(callback: IAction1<TArgs>, thisArg?: any): void;
+    unsubscribe(sender: any, thisArg?: any): void {
+        // This check assumes that thisArg isn't a function. Technically in JS, that's legal but awful.
+        // var foo = function() {}; foo.someMethod = function() { chan.unsubscribe('terrible'); }
+        if (typeof sender === "function") { // Overload 2
+            this._unsubscribe(q => this._match(q, sender, thisArg));
+        } else if (sender) { // Overload 1
+            // Can't safely unsubscribe null or undefined, sorry
+            this._unsubscribe(q => q.thisArg === sender);
         }
     }
 
-    unsubscribeCallback(callback: IAction1<TArgs>): void {
-        // Only searches non-delegates
-        let i = 0;
-        while (i < this.delegate.length) {
-            const q = this.delegate[i];
-            if (!Array.isArray(q) && q.callback === callback) {
-                this.delegate.splice(i, 1);
-                continue;
-            }
-            i++;
-        }
-    }
-
-    unsubscribeListener(sender: any): void {
-        // First try to unsubscribe the default delegate. Can't do anything if it has a different name, though.
-        if ("delegate" in sender) {
-            this.unsubscribeDelegate(sender.delegate);
-        }
-
-        // Only searches non-delegates
-        let i = 0;
-        while (i < this.delegate.length) {
-            const q = this.delegate[i];
-            if (!Array.isArray(q) && q.thisArg === sender) {
-                this.delegate.splice(i, 1);
-                continue;
-            }
-            i++;
-        }
-    }
-
-    unsubscribeDelegate(delegate: RecursiveArray<Delegate>): void {
-        let i = 0;
-        while (i < this.delegate.length) {
-            const q = this.delegate[i];
-            if (q === delegate) {
-                this.delegate.splice(i, 1);
-                continue;
-            }
-            i++;
-        }
-    }
-
-    invoke(args: TArgs): void {
-        for (const listener of traverse<Delegate>(this.delegate)) {
-            if (!this._disableAsync) {
+    invoke(args: TArgs, asyncSetting?: boolean): void {
+        for (const listener of this._delegates) {
+            if (asyncSetting === false) {
+                listener.callback.call(listener.thisArg, args);
+            } else {
                 // Async version. Does not work well with the chrome debugger.
                 listener.promise.resolve(args);
-            } else {
-                listener.callback.call(listener.thisArg, args);
             }
         }
     }
 
-    find({ callback, thisArg, firstMatch }: { callback?: IAction1<any>, thisArg?: any, firstMatch?: boolean } = {}): Delegate[] {
+    find({ callback, thisArg, firstMatch }: { callback: IAction1<any>, thisArg?: any, firstMatch?: boolean }): Delegate[] {
         const results: Delegate[] = [];
-        for (const listener of traverse<Delegate>(this.delegate)) {
-            if (match(listener)) {
+        for (const listener of this._delegates) {
+            if (this._match(listener, callback, thisArg)) {
                 results.push(listener);
                 if (firstMatch) {
                     break;
@@ -127,27 +63,31 @@ export class EventHandler<TArgs = any> implements IDisposable {
             }
         }
         return results;
-
-        function match(listener: Delegate): boolean {
-            if (callback && thisArg) {
-                return listener.callback === callback && listener.thisArg === thisArg;
-            }
-            if (callback) {
-                return listener.callback === callback;
-            }
-            if (thisArg) {
-                return listener.thisArg === thisArg;
-            }
-            return true;
-        }
     }
 
     clear(): void {
-        this.delegate.length = 0;
+        this._delegates.length = 0;
     }
 
-    dispose(): void {
-        this.clear();       // Clears the delegate
-        (this.delegate as any) = undefined; // Makes sure this can't be used again
+    private _unsubscribe(test: IPredicate1<Delegate>): void {
+        // This modifies the array it's iterating so can't use a normal iterable
+        let i = 0;
+        while (i < this._delegates.length) {
+            if (test(this._delegates[i])) {
+                this._delegates.splice(i, 1);
+                continue;
+            }
+            i++;
+        }
+    }
+
+    private _match(listener: Delegate, callback: IAction1<TArgs>, thisArg?: any): boolean {
+        if (callback && thisArg) {
+            return listener.callback === callback && listener.thisArg === thisArg;
+        }
+        if (callback) {
+            return listener.callback === callback;
+        }
+        return false;
     }
 }

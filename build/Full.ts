@@ -13,7 +13,7 @@ import { Component } from '../src/HtmlComponent/Component';
 import { ComponentMap, getComponent } from '../src/HtmlComponent/ComponentMap';
 import { observableAssign } from '../src/Observable/ObservableAssign';
 import { ObservableProperty } from '../src/Observable/ObservableProperty';
-import { ObservableProxy } from '../src/Observable/ObservableProxy';
+import { ObservableProxy, proximate } from '../src/Observable/ObservableProxy';
 import { ObservableState } from '../src/Observable/ObservableState';
 import { PageRouter } from '../src/Router/PageRouter';
 import { DeferredPromise } from '../src/System/Async/DeferredPromise';
@@ -31,6 +31,7 @@ import { cloneObject } from '../src/System/Utility/CloneObject';
 import { getUniqueId } from '../src/System/Utility/GetUniqueId';
 import { isPositiveIntegerString } from '../src/System/Utility/IsInteger';
 import { objectFullAssign } from '../src/System/Utility/ObjectFullAssign';
+import { EventHub } from '../src/System/EventHandler/EventHub';
 
 (function main() {
     // This is not mini, but it is everything that's in any of the mini-ichigo
@@ -49,12 +50,14 @@ import { objectFullAssign } from '../src/System/Utility/ObjectFullAssign';
     };
     const observable: any = {
         EventHandler,
+        EventHub,
         observableAssign,
         ObservableProperty,
         ObservableProxy,
         ObservableState,
         ArrayChangedEventArgs,
         PropertyChangedEventArgs,
+        proximate
     };
     const promise: any = {
         DeferredPromise,

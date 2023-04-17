@@ -67,7 +67,7 @@ export class Test008 extends TestCaseView {
             // Demonstrating setState
             (testObject as any).year = 1971;
 
-            const observable1 = new ObservableState(testObject);
+            const observable1 = new ObservableState(testObject, 'test1');
             // Both for legibility and to avoid pulling the value 4 times
             const v1 = observable1.value;
             assert(v1.place === 'motels' && v1.howMany === 200 && v1.voices.length === 4, 'value should return the original data');
@@ -134,7 +134,7 @@ export class Test008 extends TestCaseView {
             (observable1.value as any).howMany = 1000;
             assert(observable1.value.howMany === 1, 'Internal state is read-only');
 
-            const observable2 = new ObservableState(testObject);
+            const observable2 = new ObservableState(testObject, 'test2');
             observable2.subscribe(args => this.testArea.appendChild(paragraph(`New:${args.newValue.howMany}. Old:${args.oldValue.howMany}.`, { id: "obs2test" + args.oldValue.howMany })));
             observable2.setState({ howMany: 300 });
             observable2.setState({ howMany: 400 });
@@ -147,7 +147,7 @@ export class Test008 extends TestCaseView {
             // And now, to demonstrate the reason the state observable exists. The following test would take a bit more work to
             // get functioning using ordinary observables. Voices would need to be an array of observables, not simple objects.
             // We'll also demonstrate the cloning of a state observable.
-            const observable3 = new ObservableState(observable2);
+            const observable3 = new ObservableState(observable2, 'test3');
             observable3.subscribe(args => this.testArea.appendChild(paragraph(`Voices:${args.newValue.voices.map((m: any) => m.name).join(', ')}`, { id: "obs3test" })));
             observable3.setState((obj: any) => {
                 obj.voices[0].name = 'Mark Volman';
@@ -155,45 +155,8 @@ export class Test008 extends TestCaseView {
             });
             asyncAsserts.then(() => assert(document.getElementById('obs3test')!.innerHTML === 'Voices:Mark Volman, Howard Kaylan, Jimmie Carl Black, Jim Pons', 'Callback executed with nested modification'));
 
-            // The same forward/bubble events exist as on other observables
-            const observable4 = new ObservableState({ name: "Dog" });
-            const observable5 = new ObservableState({ name: "Cat" });
-            const observable6 = new ObservableState({ name: "Cactus" });
-            function callback(this: ObservableState<{ name: string }>, args: PropertyChangedEventArgs, id: number): void {
-                document.getElementById('testArea')!.appendChild(paragraph(`I am ${this.value.name}. Event value: ${args.newValue.name}`, { id: "forwardTest" + id }));
-            }
-
-            // Passing around "this" in javascript is bloody annoying.
-            observable4.subscribe(args => callback.call(observable4, args, 1), observable4);
-            observable5.subscribe(args => callback.call(observable5, args, 2), observable5);
-            observable6.subscribe(args => callback.call(observable6, args, 3), observable6);
-            observable5.sendChangeEventsTo(observable4);
-            observable5.receiveChangeEventsFrom(observable6);
-
-            // 4 is sending to 3, which is sending to 2. So modifying 4 will trigger all 3 callbacks.
-            observable6.value = { name: "Boa Constrictor" };
-
-            asyncAsserts.then(() => assert(document.getElementById('forwardTest1')!.innerHTML === 'I am Dog. Event value: Boa Constrictor', 'Two subscribe layers deep succeeded'));
-            asyncAsserts.then(() => assert(document.getElementById('forwardTest2')!.innerHTML === 'I am Cat. Event value: Boa Constrictor', 'One subscribe layer deep succeeded'));
-            asyncAsserts.then(() => assert(document.getElementById('forwardTest3')!.innerHTML === 'I am Boa Constrictor. Event value: Boa Constrictor', 'Original subscribe succeeded'));
-
-            // To make an observable synchronous, set disableAsync to true. This will execute the callbacks in a synchronous way. Note
-            // in this example how the current value matches the newValue, when if this were async, the current value would always be Remus.
-            let idx = 0;
-            const observable7 = new ObservableState({ name: 'World' }, { disableAsync: true });
-            observable7.subscribe(args => {
-                this.testArea.appendChild(paragraph(`New:${args.newValue.name}. Current:${observable7.getSafeValue('name')}.`, { id: "syncObservable" + idx }));
-                idx += 1;
-            });
-            observable7.value = { name: 'Vulcan' };
-            assert(document.getElementById('syncObservable0')!.innerHTML === 'New:Vulcan. Current:Vulcan.', 'Callback called synchronously 1');
-            observable7.value = { name: 'Romulus' };
-            assert(document.getElementById('syncObservable1')!.innerHTML === 'New:Romulus. Current:Romulus.', 'Callback called synchronously 2');
-            observable7.value = { name: 'Remus' };
-            assert(document.getElementById('syncObservable2')!.innerHTML === 'New:Remus. Current:Remus.', 'Callback called synchronously 3');
-
             // The observable object can be a primitive object.
-            const observable8 = new ObservableState("World");
+            const observable8 = new ObservableState("World", 'test4');
             observable8.value = 'Mars';
             assert(observable8.value === 'Mars', 'State can be a primitive object');
 

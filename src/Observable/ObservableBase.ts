@@ -1,110 +1,67 @@
-import { RepeatablePromise } from '../System/Async/RepeatablePromise';
-import { IObservable } from './IObservable';
-import { PropertyChangedEventArgs } from '../System/EventHandler/PropertyChangedEventArgs';
-import { EventHandler } from '../System/EventHandler/EventHandler';
 import { IAction1 } from '../System/Types/DelegateInterfaces';
-import { Nullable } from '../System/Types/NoneType';
-import { RecursiveArray } from '../System/Types/RecursiveArray';
-import { Delegate } from '../System/EventHandler/Delegate';
+import { EventHub, IEventChannel } from '../System/EventHandler/EventHub';
+import { IObservable } from './IObservable';
 
 /**
  * Common logic between the different observable classes. These implement IObservable. The invocation itself varies from class to class.
  */
-export abstract class ObservableBase<T = any> implements IObservable {
-    changeHandler: EventHandler<T> = new EventHandler();
-
-    constructor(options?: IObservableOptions);
-    constructor({ name, forwardTo, bubbleFrom, disableAsync }: IObservableOptions = {}) {
-        if (disableAsync) {
-            this.changeHandler = new EventHandler(true);
+export abstract class ObservableBase<TArgs = any> implements IObservable {
+    private _eventChannelName?: string;
+    protected get _eventChannel(): IEventChannel<TArgs> | null {
+        // This is always pulled live, so we have as few references to the static eventChannel objects as possible (possible memory leaks)
+        if (!this._eventChannelName) {
+            return null;
         }
-        if (forwardTo) {
-            this.sendChangeEventsTo(forwardTo);
-        }
-        if (bubbleFrom) {
-            for (const child of bubbleFrom) {
-                this.receiveChangeEventsFrom(child);
-            }
-        }
-        this.tagDelegate(name);
-    }
-
-    subscribe(delegate: RecursiveArray<Delegate>): void;
-    subscribe(callback: IAction1<PropertyChangedEventArgs>, thisArg?: any): RepeatablePromise | undefined;
-    subscribe(callback: IAction1<PropertyChangedEventArgs> | RecursiveArray<Delegate>, thisArg?: any): RepeatablePromise | undefined {
-        // Typescript has forgotten that EventHandler can accept an array.
-        // In spite if the fact that this signature is identical.
-        return this.changeHandler.subscribe(callback as any, thisArg);
+        return EventHub.getChannel(this._eventChannelName);
     }
 
     /**
-     * Subscribe the input's delegate to this object's changes.
+     * Send either a channel name, nothing (to subscribe to the current channel), or "true" for doNotSubscribe to not set a channel.
+     * You can always set a channel later by calling setChannel().
      */
-    sendChangeEventsTo(forwardTo: IObservable): void {
-        // Join the other event handler to this, so that when this is invoked, so is the other.
-        this.subscribe(forwardTo.changeHandler.delegate);
-    }
-
-    /**
-     * Subscribe this object's delegate to the input object's changes.
-     */
-    receiveChangeEventsFrom(bubbleFrom: IObservable): void {
-        // Subscribe to events raised on the other handler, so that when that is invoked, so is this
-        // The same as forwardChangeEventsTo except that this is the target, not the source.
-        bubbleFrom.subscribe(this.changeHandler.delegate);
-    }
-
-    unsubscribeCallback(callback: IAction1<T>): void {
-        return this.changeHandler.unsubscribeCallback(callback);
-    }
-
-    unsubscribeSender(sender: any): void {
-        return this.changeHandler.unsubscribeListener(sender);
-    }
-
-    unsubscribeDelegate(delegate: RecursiveArray<Delegate>): void {
-        return this.changeHandler.unsubscribeDelegate(delegate);
-    }
-
-    /**
-     * This is probably frowned upon (see how TS doesn't like it), but it's valid JS.
-     * It's only intended for troubleshooting, not real logic. There are times when you're
-     * trying to identify exactly which delegates are subscribed, and this is really hard when
-     * nothing has human-readable names.
-     */
-    tagDelegate(name: string): void {
-        if (name) {
-            (this.changeHandler.delegate as any)._tag = name;
+    constructor();
+    constructor(eventChannel?: string);
+    constructor(doNotSubscribe: true);
+    constructor(eventChannel?: string | true) {
+        if (eventChannel === true) {
+            this._eventChannelName = undefined;
+        } else {
+            this._eventChannelName = eventChannel || EventHub.currentChannel;
         }
     }
 
-    dispose(): void {
-        this.changeHandler.dispose();
+    subscribe(callback: IAction1<any>, thisArg?: any): void;
+    subscribe(callback: any, thisArg?: any) {
+        if (this._eventChannel) {
+            EventHub.subscribe(this._eventChannel.name, callback, thisArg);
+        }
+    }
+    unsubscribe(thisArg: any): void;
+    unsubscribe(callback: IAction1<any>, thisArg?: any): void;
+    unsubscribe(callback: any, thisArg?: any) {
+        if (this._eventChannel) {
+            EventHub.unsubscribe(this._eventChannel.name, callback, thisArg);
+        }
     }
 
     toJSON(): any {
         const result: Record<string, any> = {};
         for (const x in this) {
-            if (x !== "changeHandler" && x !== "privateProperty2") {
+            if (x !== "_eventChannel" && x !== "_eventChannelName" && x !== "__isProxy__") {
                 result[x] = this[x];
             }
         }
         return result;
     }
-}
 
-export interface IObservableOptions {
-    name?: string;
-    /**
-     * This observable is a child of a different observable. Any events in this should be forwarded.
-     */
-    forwardTo?: IObservable;
-    /**
-     * This observable contains other observables. Any events in them should be received.
-     */
-    bubbleFrom?: IObservable[];
-    /**
-     * Execute delegates synchronously.
-     */
-    disableAsync?: boolean;
+    protected invoke(args: TArgs, name?: string): void {
+        // Remember, someone could create an observable without subscribing to a channel.
+        // This is pointless, but I'm not sure we should throw on it.
+        if (!this._eventChannel) {
+            // tslint:disable-next-line:no-console
+            console.warn(`Observable ${name} not subscribed to an event channel`);
+            return;
+        }
+        this._eventChannel.invoke(args);
+    }
 }

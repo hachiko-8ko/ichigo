@@ -19,8 +19,7 @@ export class ConsoleView extends Component<HTMLDivElement>{
         this.viewModel = new ConsoleViewModel();
         this.entries = new BoundComponent<HTMLDivElement, ConsoleViewModel>(this.viewModel, {
             parent: this.content,
-            selector: '#consoleLog',
-            observeAllViewModel: true
+            selector: '#consoleLog'
         });
     }
 

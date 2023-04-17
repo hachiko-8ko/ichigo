@@ -147,7 +147,6 @@ export class Test012 extends TestCaseView {
                 .setValueAttribute() // defaults to .
                 .addWriteTarget() // defaults to .
                 .addWriteEvent()
-                .observe()
                 .render()
                 .appendToParent(form);
             const observed = createElement(elementType.HTMLInputElement, { id: "observed" }, { readonly: true })

@@ -77,6 +77,4 @@ I'm planning on making some breaking changes, hopefully not too much. These are 
 
 * Removing the loop parent 'selector', which I never liked, and replacing i5_source with something more flexible.
 
-* Deciding which coding style to promote, and possibly remove functionality to match it. As Test 11 shows, everyone's different coding style is supported. It's too complicated. Probably need to cut the overloads on the component constructor in half.
-
-* Finding some way to make it easier to separate components into different files and break HTML apart from JS. I don't know how, without either requiring a custom build process (could be done in webpack fairly easy enough) or an actual server (trivial). Probably have to be heavy use of template literals. This is more of a change to examples rather than actual code, but it's still a lot of work because typescript can't flag issues in documentation.
+* A completely opinionated rewrite. This means: deciding which coding style to promote, and possibly remove functionality to match it. As Test 11 shows, everyone's different coding style is currently supported. It's too complicated. I think it will be cutting out almost all of the component constructor overloads, removing all the cases that inject code into existing HTML objects: leaving only innerHtml, outerHtml, and copy from &gt;template&lt; tag. This makes it impossible to have overlapping components, and while we still can't separate HTML into different files unless it's in the JS object, they're at least separate in the main HTML file.

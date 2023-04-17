@@ -16,6 +16,7 @@ import {
 } from '../src/Api';
 import { TestCaseView } from './TestCaseView';
 import { TestCaseViewModel } from './TestCaseViewModel';
+import { EventHub } from '../src/System/EventHandler/EventHub';
 
 // tslint:disable:max-classes-per-file
 class TestViewModel extends TestCaseViewModel {
@@ -267,17 +268,17 @@ export class Test011 extends TestCaseView {
 
                     this.editor = {
                         subjectDisplay: new BoundComponent(this.current,
-                            new ExistingLookupBindingOptions({ parent: this.content, selector: '.chat-subject-display', observeViewModel: true })),
+                            new ExistingLookupBindingOptions({ parent: this.content, selector: '.chat-subject-display' })),
                         subject: new BoundComponent(this.current,
-                            new ExistingLookupBindingOptions({ parent: this.content, selector: '.chat-subject', observeViewModel: true })),
+                            new ExistingLookupBindingOptions({ parent: this.content, selector: '.chat-subject' })),
                         from: new BoundComponent(this.current,
-                            new ExistingLookupBindingOptions({ parent: this.content, selector: '.chat-from', observeViewModel: true })),
+                            new ExistingLookupBindingOptions({ parent: this.content, selector: '.chat-from' })),
                         message: new BoundComponent(this.current,
-                            new ExistingLookupBindingOptions({ parent: this.content, selector: '.chat-message', observeViewModel: true })),
+                            new ExistingLookupBindingOptions({ parent: this.content, selector: '.chat-message' })),
                         closing: new BoundComponent(this.current,
-                            new ExistingLookupBindingOptions({ parent: this.content, selector: '.chat-closing', observeViewModel: true })),
+                            new ExistingLookupBindingOptions({ parent: this.content, selector: '.chat-closing' })),
                         button: new BoundComponent(this.current,
-                            new ExistingLookupBindingOptions({ parent: this.content, selector: '.chat-submit', observeViewModel: true }))
+                            new ExistingLookupBindingOptions({ parent: this.content, selector: '.chat-submit' }))
                     };
 
                     this.addInlineEventListeners();
@@ -311,6 +312,7 @@ export class Test011 extends TestCaseView {
 
                 constructor(viewModel: ChatListViewModel) {
                     super({ selector: '#chat-example2' });
+
                     this.viewModel = viewModel;
                     this.current = this.viewModel.beginChat();
 
@@ -318,7 +320,7 @@ export class Test011 extends TestCaseView {
                         .observe(this.viewModel.chats);
 
                     // Inject all chat entry components in one go
-                    this.components = BoundComponent.inject('#chat-example2 .chat-editor .component', { observeViewModel: true }, kw('viewModel', this.current));
+                    this.components = BoundComponent.inject('#chat-example2 .chat-editor .component', kw('viewModel', this.current));
 
                     this.addInlineEventListeners();
                 }
@@ -359,8 +361,7 @@ export class Test011 extends TestCaseView {
                                 <div>#<i-v>id</i-v> From:<i-v>fromName</i-v> at <i-v>created</i-v>. <i-v>subject</i-v></div>
                                 <div><i-v>stripped</i-v></div>
                             </div>
-                        </div>`,
-                        observeTargets: [viewModel.chats]
+                        </div>`
                     });
                 }
             }
@@ -371,8 +372,7 @@ export class Test011 extends TestCaseView {
                 }
                 constructor(viewModel: ChatViewModel) {
                     super(viewModel, {
-                        outerHtml: `<div class="component chat-subject-display" :text="subject" :if="subject"></div>`,
-                        observeViewModel: true
+                        outerHtml: `<div class="component chat-subject-display" :text="subject" :if="subject"></div>`
                     });
                 }
             }
@@ -386,7 +386,7 @@ export class Test011 extends TestCaseView {
                             <input class="component chat-subject" :input:="subject" :switch-:red="subject" />
                         </div>
                         `)[0];
-                    return new ChatSubject3(viewModel, { parent: injected.content, selector: 'input', observeViewModel: true });
+                    return new ChatSubject3(viewModel, { parent: injected.content, selector: 'input' });
                 }
             }
 
@@ -398,7 +398,7 @@ export class Test011 extends TestCaseView {
                             <input class="component chat-from" :input:="fromName" :switch-:red="fromName" />
                         </div>
                         `)[0];
-                    return new ChatFrom3(viewModel, { parent: injected.content, selector: 'input', observeViewModel: true });
+                    return new ChatFrom3(viewModel, { parent: injected.content, selector: 'input' });
                 }
             }
 
@@ -409,7 +409,7 @@ export class Test011 extends TestCaseView {
                             <textarea class="component chat-message" :input:="message" :switch-:red="message"></textarea>
                         </div>
                         `)[0];
-                    return new ChatMessage3(viewModel, { parent: injected.content, selector: 'textarea', observeViewModel: true });
+                    return new ChatMessage3(viewModel, { parent: injected.content, selector: 'textarea' });
                 }
             }
 
@@ -423,8 +423,7 @@ export class Test011 extends TestCaseView {
                             <div class="component chat-closing">
                                 <i-v>closing</i-v> <br />
                                 <i-v>fromName</i-v>
-                            </div>`,
-                        observeViewModel: true
+                            </div>`
                     });
                 }
             }
@@ -435,8 +434,7 @@ export class Test011 extends TestCaseView {
                 }
                 constructor(viewModel: ChatViewModel) {
                     super(viewModel, {
-                        outerHtml: `<button class="component chat-submit" type="submit" :bool:disabled="invalid">Submit</button>`,
-                        observeViewModel: true
+                        outerHtml: `<button class="component chat-submit" type="submit" :bool:disabled="invalid">Submit</button>`
                     });
                 }
             }
@@ -524,8 +522,7 @@ export class Test011 extends TestCaseView {
                         },
                         attributes: {
                             i5_loop: "chats"
-                        },
-                        observeTargets: [viewModel.chats]
+                        }
                     });
                 }
             }
@@ -537,8 +534,7 @@ export class Test011 extends TestCaseView {
                         attributes: {
                             i5_text: "subject",
                             i5_if: "subject"
-                        },
-                        observeViewModel: true
+                        }
                     });
                 }
             }
@@ -554,8 +550,7 @@ export class Test011 extends TestCaseView {
                     parent.querySelector('.chat-subject')!.appendChild(wrapper);
 
                     super(viewModel, {
-                        element: wrapper.querySelector<HTMLInputElement>('input')!,
-                        observeViewModel: true
+                        element: wrapper.querySelector<HTMLInputElement>('input')!
                     });
                 }
             }
@@ -570,8 +565,7 @@ export class Test011 extends TestCaseView {
                     parent.querySelector('.chat-from')!.appendChild(wrapper);
 
                     super(viewModel, {
-                        element: wrapper.querySelector<HTMLInputElement>('input')!,
-                        observeViewModel: true
+                        element: wrapper.querySelector<HTMLInputElement>('input')!
                     });
                 }
             }
@@ -585,8 +579,7 @@ export class Test011 extends TestCaseView {
                     parent.querySelector('.chat-message')!.appendChild(wrapper);
 
                     super(viewModel, {
-                        element: wrapper.querySelector<HTMLTextAreaElement>('textarea')!,
-                        observeViewModel: true
+                        element: wrapper.querySelector<HTMLTextAreaElement>('textarea')!
                     });
                 }
             }
@@ -599,8 +592,7 @@ export class Test011 extends TestCaseView {
                             innerHTML: `
                                 <i-v>closing</i-v> <br />
                                 <i-v>fromName</i-v>`
-                        },
-                        observeViewModel: true
+                        }
                     });
                 }
             }
@@ -612,8 +604,7 @@ export class Test011 extends TestCaseView {
                         attributes: {
                             type: 'submit',
                             i5_bool_disabled: 'invalid'
-                        },
-                        observeViewModel: true
+                        }
                     });
                 }
             }
@@ -703,8 +694,7 @@ export class Test011 extends TestCaseView {
                         attributes: {
                             class: 'component chat-list',
                             i5_loop: "chats"
-                        },
-                        observeTargets: [viewModel.chats]
+                        }
                     });
                 }
             }
@@ -717,8 +707,7 @@ export class Test011 extends TestCaseView {
                             class: 'component chat-subject-display',
                             i5_text: "subject",
                             i5_if: "subject"
-                        },
-                        observeViewModel: true
+                        }
                     });
                 }
             }
@@ -740,8 +729,7 @@ export class Test011 extends TestCaseView {
                             class: 'component chat-subject',
                             i5_input_value: "subject",
                             i5_switch0_red: "subject"
-                        },
-                        observeViewModel: true
+                        }
                     })).appendToParent(this);
                 }
             }
@@ -759,8 +747,7 @@ export class Test011 extends TestCaseView {
                             class: 'component chat-from',
                             i5_input_value: "fromName",
                             i5_switch0_red: "fromName"
-                        },
-                        observeViewModel: true
+                        }
                     })).appendToParent(this);
                 }
             }
@@ -778,8 +765,7 @@ export class Test011 extends TestCaseView {
                             class: 'component chat-message',
                             i5_input_value: "message",
                             i5_switch0_red: "message"
-                        },
-                        observeViewModel: true
+                        }
                     })).appendToParent(this);
                 }
             }
@@ -794,8 +780,7 @@ export class Test011 extends TestCaseView {
                             innerHTML: `
                                 <i-v>closing</i-v> <br />
                                 <i-v>fromName</i-v>`
-                        },
-                        observeViewModel: true
+                        }
                     });
                 }
             }
@@ -811,8 +796,7 @@ export class Test011 extends TestCaseView {
                             type: 'submit',
                             class: 'component chat-submit',
                             i5_bool_disabled: 'invalid'
-                        },
-                        observeViewModel: true
+                        }
                     });
                 }
             }
@@ -939,7 +923,6 @@ export class Test011 extends TestCaseView {
                         .addClass('component chat-subject-display')
                         .setTextTemplate('subject')
                         .setVisibility('subject')
-                        .observe()
                         .render();
 
                     const subject = new BoundComponent<HTMLInputElement, ChatViewModel>(this.current, { type: elementType.HTMLInputElement })
@@ -948,7 +931,6 @@ export class Test011 extends TestCaseView {
                         .addWriteTarget('subject')
                         .addWriteEvent()
                         .addCssClassSwitch('red', 'subject', true)
-                        .observe()
                         .render();
 
                     const from = new BoundComponent<HTMLInputElement, ChatViewModel>(this.current, { type: elementType.HTMLInputElement })
@@ -957,7 +939,6 @@ export class Test011 extends TestCaseView {
                         .addWriteTarget('fromName')
                         .addWriteEvent()
                         .addCssClassSwitch('red', 'fromName', true)
-                        .observe()
                         .render();
 
                     const message = new BoundComponent<HTMLTextAreaElement, ChatViewModel>(this.current, { type: elementType.HTMLTextAreaElement })
@@ -966,13 +947,11 @@ export class Test011 extends TestCaseView {
                         .addWriteTarget('message')
                         .addWriteEvent()
                         .addCssClassSwitch('red', 'message', true)
-                        .observe()
                         .render();
 
                     const closing = new BoundComponent<HTMLDivElement, ChatViewModel>(this.current)
                         .addClass('component chat-closing')
                         .setTemplate(`<i-v>closing</i-v> <br /> <i-v>fromName</i-v>`)
-                        .observe()
                         .render();
 
                     const button = new BoundComponent<HTMLButtonElement, ChatViewModel>(this.current,
@@ -982,7 +961,6 @@ export class Test011 extends TestCaseView {
                         }))
                         .addClass('component chat-submit')
                         .addBooleanAttributeMapping('disabled', 'invalid')
-                        .observe()
                         .render();
 
                     this.editor = {

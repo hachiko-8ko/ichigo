@@ -1,10 +1,12 @@
+import { IAction1 } from '../System/Types/DelegateInterfaces';
 import { escapeHtml } from '../Html/EscapeHtml';
 import { PropertyChangedEventArgs } from '../System/EventHandler/PropertyChangedEventArgs';
 import { isNone, Nullable } from '../System/Types/NoneType';
 import { cloneDeep } from '../System/Utility/CloneDeep';
 import { isPrimitive } from '../System/Utility/IsPrimitive';
 import { observableCheck } from './IObservable';
-import { IObservableOptions, ObservableBase } from './ObservableBase';
+import { ObservableBase } from './ObservableBase';
+import { IEventChannel, EventHub } from '../System/EventHandler/EventHub';
 
 /**
  * An observable state that should only be accessed using the relevant methods, allowing atomic changes to multiple properties
@@ -19,10 +21,16 @@ export class ObservableState<T = any> extends ObservableBase<PropertyChangedEven
      * Pass the initial value for the state.
      * To clone another observable's state, pass an ObservableState.
      */
+    constructor(value: ObservableState<T>, eventChannel?: string);
     constructor(value: ObservableState<T>, options?: IObservableOptions);
+    constructor(value: T, eventChannel?: string);
     constructor(value: T, options?: IObservableOptions);
-    constructor(value: ObservableState<T> | T, options: IObservableOptions = {}) {
-        super(options);
+    constructor(value: ObservableState<T> | T, options: IObservableOptions | string | undefined) {
+        // There's a nasty 'feature' where you can't call any other code before the super() call. So this function exists.
+        // There's another icky typescript feature where it only checks the public "fake" overloads and and not the final "real" one.
+        // This method, because it has to pipe into the super call, has to match the real one. You can't double-up on dupe super calls
+        // surrounded by type guards because no other code before super. So this has to be cast as any.
+        super(handleWackyOverloads(options) as any);
 
         if (value instanceof ObservableState) {
             this._value = cloneDeep(value.value);
@@ -30,8 +38,19 @@ export class ObservableState<T = any> extends ObservableBase<PropertyChangedEven
             this._value = cloneDeep(value);
         }
 
-        options = options || {};
-        this.propertyName = options.name || 'setState';
+        if (typeof (options === "object")) {
+            this.propertyName = (options as any || {}).name || 'setState';
+        }
+
+        function handleWackyOverloads(obj: IObservableOptions | string | undefined): string | true | undefined {
+            let o2: IObservableOptions;
+            if (typeof obj === "string") {
+                o2 = { eventChannel: obj };
+            } else {
+                o2 = obj || {};
+            }
+            return o2.doNotSubscribe || o2.eventChannel;
+        }
     }
 
     get value(): T {
@@ -149,6 +168,17 @@ export class ObservableState<T = any> extends ObservableBase<PropertyChangedEven
         }
     }
 
+    subscribe(callback: IAction1<PropertyChangedEventArgs>, thisArg?: any): void;
+    subscribe(callback: IAction1<PropertyChangedEventArgs>, thisArg?: any): void {
+        return super.subscribe(callback, thisArg);
+    }
+
+    unsubscribe(thisArg: any): void;
+    unsubscribe(callback: IAction1<any>, thisArg?: any): void;
+    unsubscribe(callback: IAction1<any>, thisArg?: any): void {
+        super.unsubscribe(callback, thisArg);
+    }
+
     toString(): string {
         return JSON.stringify(this._value);
     }
@@ -158,7 +188,7 @@ export class ObservableState<T = any> extends ObservableBase<PropertyChangedEven
     }
 
     protected publishPropertyChanged(type: string, propertyName: PropertyKey, oldValue: Nullable<T>, newValue: Nullable<T>, sender?: any): void {
-        this.changeHandler.invoke(new PropertyChangedEventArgs({ type, propertyName, oldValue, newValue, sender }));
+        this.invoke(new PropertyChangedEventArgs({ type, propertyName, oldValue, newValue, sender }), propertyName ? propertyName.toString() : undefined);
     }
 }
 
@@ -168,4 +198,10 @@ export function observableStateCheck<T extends any>(obj: any): obj is Observable
     }
     // I don't know if I should check for this or for getState() and setState()
     return obj && obj instanceof ObservableState;
+}
+
+interface IObservableOptions {
+    name?: string;
+    eventChannel?: string;
+    doNotSubscribe?: true;
 }

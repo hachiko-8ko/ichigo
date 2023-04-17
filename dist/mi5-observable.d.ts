@@ -1,5 +1,5 @@
 import { Nullable } from '../src/System/Types/NoneType';
-import { ObservableBase, IObservableOptions } from '../src/Observable/ObservableBase';
+import { ObservableBase } from '../src/Observable/ObservableBase';
 import { ObservableProperty } from '../src/Observable/ObservableProperty';
 import { ObservableProxy } from '../src/Observable/ObservableProxy';
 import { ObservableState } from '../src/Observable/ObservableState';

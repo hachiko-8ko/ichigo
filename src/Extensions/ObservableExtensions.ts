@@ -32,24 +32,24 @@ declare global {
 /**
  * Quickly convert an object to a ObservableProperty.
  */
-Object.prototype.toObservable = function <T>(this: any, name?: string): ObservableProperty<T> {
-    return new ObservableProperty<T>(this, { name });
+Object.prototype.toObservable = function <T>(this: any, eventChannel?: string, name?: string): ObservableProperty<T> {
+    return new ObservableProperty<T>(this, { eventChannel, name });
 };
 /**
  * Quickly convert a string to an ObservableProperty.
  */
-String.prototype.toObservable = function (this: string, name?: string): ObservableProperty<string> {
-    return new ObservableProperty<string>(this, { name });
+String.prototype.toObservable = function (this: string, eventChannel?: string, name?: string): ObservableProperty<string> {
+    return new ObservableProperty<string>(this, { eventChannel, name });
 };
 /**
  * Quickly convert a number to a ObservableProperty.
  */
-Number.prototype.toObservable = function (this: number, name?: string): ObservableProperty<number> {
-    return new ObservableProperty<number>(this as number, { name });
+Number.prototype.toObservable = function (this: number, eventChannel?: string, name?: string): ObservableProperty<number> {
+    return new ObservableProperty<number>(this as number, { eventChannel, name });
 };
 /**
  * Quickly convert a bool to a ObservableProperty.
  */
-Boolean.prototype.toObservable = function (this: boolean, name?: string): ObservableProperty<boolean> {
-    return new ObservableProperty<boolean>(this, { name });
+Boolean.prototype.toObservable = function (this: boolean, eventChannel?: string, name?: string): ObservableProperty<boolean> {
+    return new ObservableProperty<boolean>(this, { eventChannel, name });
 };
