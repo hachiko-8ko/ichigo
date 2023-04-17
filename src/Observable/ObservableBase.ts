@@ -7,7 +7,7 @@ import { IObservable } from './IObservable';
  */
 export abstract class ObservableBase<TArgs = any> implements IObservable {
     private _eventChannelName?: string;
-    protected get _eventChannel(): IEventChannel<TArgs> | null {
+    protected get _eventChannel(): IEventChannel | null {
         // This is always pulled live, so we have as few references to the static eventChannel objects as possible (possible memory leaks)
         if (!this._eventChannelName) {
             return null;

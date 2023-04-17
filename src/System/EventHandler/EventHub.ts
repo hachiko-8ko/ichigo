@@ -39,7 +39,7 @@ export class EventHub {
     static currentChannel: string = "main";
     static defaultAsyncSetting: boolean = true;
 
-    static getChannel<TArgs>(eventChannel?: string): IEventChannel<TArgs> {
+    static getChannel(eventChannel?: string): IEventChannel {
         eventChannel = eventChannel || this.currentChannel;
         let chan = EventHub._channels.get(eventChannel);
         if (!chan) {
@@ -106,9 +106,9 @@ export class EventHub {
             _clearChannel(ch);
         }
         this._channels = new Map();
-        this._channels.set("main", new EventChannel<any>("main", this.defaultAsyncSetting));
+        this._channels.set("main", new EventChannel("main", this.defaultAsyncSetting));
 
-        function _clearChannel(chan: EventChannel<any>): void {
+        function _clearChannel(chan: EventChannel): void {
             chan.eventHandler.clear();
             EventHub._channels.delete(chan.name);
             delete chan.eventHandler;
@@ -146,10 +146,10 @@ export class EventHub {
     // That way, the browser should delete the map, and the channels, and their arrays, as long as there is other no direct reference to them
     // Make it an option to use a real map, however, so this can be used outside browser context
 
-    private static _channels: Map<string, EventChannel<any>> = new Map([["main", new EventChannel<any>("main")]]);
+    private static _channels: Map<string, EventChannel> = new Map([["main", new EventChannel("main")]]);
 }
 
-export interface IEventChannel<TArgs> {
+export interface IEventChannel {
     name: string;
-    invoke(args: TArgs): void;
+    invoke(args: any): void;
 }
