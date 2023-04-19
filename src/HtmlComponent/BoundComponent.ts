@@ -20,6 +20,7 @@ import { IComponentBindingOptions } from './Options/IComponentBindingOptions';
 import { Kwarg, kw } from '../System/Types/KeywordArguments';
 import { e_ } from '../System/Utility/Elvis';
 import { EventHub } from '../System/EventHandler/EventHub';
+import { ReplacementValue } from './Internal/ReplacementValue';
 
 // This is only passed by loopPostProcess(), unless you write your own component class that does differently.
 export interface ILoopParent<TParent extends BoundComponent<HTMLElement, any> = BoundComponent<HTMLElement, any>> {
@@ -122,12 +123,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
     private _previousCssDisplaySetting?: string;
     private _loop?: { source: string, postProcess: boolean, fragment: DocumentFragment, otherComponentId?: string };
     private _loopItemClass: Constructable<BoundComponent>;
-    private _replacements: Array<{
-        element: HTMLElement,
-        source: string,
-        noescape: boolean,
-        otherComponentId?: string
-    }> = [];
+    private _replacements: Array<ReplacementValue> = [];
     private _async = false;
     private _defer = false;
     private _initialized = false;
@@ -452,15 +448,11 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
 
             const noescape = repl.hasAttribute('noescape') && repl.getAttribute('noescape') !== 'false';
             const otherComponentId = repl.getAttribute('i5_source') || repl.getAttribute('source') || (repl as HTMLElement).dataset.i5_source || (repl as HTMLElement).dataset.source || repl.getAttribute(':source');
-            this._replacements.push({
-                element: repl as HTMLElement,
-                source: repl.innerHTML,
-                noescape: noescape,
-                otherComponentId: otherComponentId || undefined
-            });
+            this._replacements.push(new ReplacementValue(this, this.viewModel, repl as HTMLElement, repl.innerHTML, noescape, otherComponentId));
         }
 
-        // In the original build of the object, f any replacements start with "this." we need to defer.
+        // In the original build of the object, if any replacements start with "this." we need to defer.
+        // TODO: This probably needs to be expanded to eval() based sources too
         if (!this._initialized && !this._defer) {
             this._defer = this._defer || !!this._replacements.find(f => f.source.startsWith('this.'));
         }
@@ -780,12 +772,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
 
     private _updateHtmlReplacements(): void {
         for (const repl of this._replacements) {
-            const newValue = this._getStringValue(repl.source, repl.noescape, repl.otherComponentId) || '';
-            const element = repl.element;
-            const currentValue = element.innerHTML;
-            if (newValue !== currentValue) {
-                element.innerHTML = newValue;
-            }
+            repl.render();
         }
     }
 
