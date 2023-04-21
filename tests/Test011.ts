@@ -98,7 +98,7 @@ export class Test011 extends TestCaseView {
                 assert(view.content.querySelector('textarea.chat-message').classList.toString().includes('red'), 'Class switch added when no message: ' + view.constructor.name);
                 assert(view.content.querySelector('button.chat-submit').hasAttribute('disabled'), 'Disabled boolean attribute added when no message: ' + view.constructor.name);
 
-                assert(list.chats.length === 6, 'Chats were added to the viewmodel during each chat submit');
+                assert(list.chats.length === 5, 'Chats were added to the viewmodel during each chat submit');
             }
 
             class ChatViewModel {
@@ -873,130 +873,6 @@ export class Test011 extends TestCaseView {
 
             testComponent(example5View);
             asyncAsserts.then(() => assertComponent(example5View, chatlist));
-
-            // I said example 5 was maximum verbosity, but THIS is maximum verbosity. Say you really liked the fluent interface
-            // and wanted to use fluent methods for everything and not do anything in the constructor.
-            // To make things even nastier, I'll do it all in a single view, without even encapsulating them in individual
-            // component classes ... this is such a pain that no developer would ever make a whole page like this, but
-            // doing it for a quick element would be no problem. In fact, VSCode's suggestions are MUCH better for methods as
-            // for constructor arguments.
-            class ChatView6 extends Component<HTMLDivElement> {
-                viewModel: ChatListViewModel;
-                current: ChatViewModel;
-                // These properties are strictly not necessary since everything is wired in the constructor but it's a good practice.
-                list: BoundComponent<HTMLDivElement, ChatListViewModel>;
-                editor: {
-                    subjectDisplay: BoundComponent<HTMLDivElement, ChatViewModel>,
-                    subject: BoundComponent<HTMLInputElement, ChatViewModel>,
-                    from: BoundComponent<HTMLInputElement, ChatViewModel>,
-                    message: BoundComponent<HTMLTextAreaElement, ChatViewModel>,
-                    closing: BoundComponent<HTMLDivElement, ChatViewModel>,
-                    button: BoundComponent<HTMLButtonElement, ChatViewModel>
-                };
-
-                constructor(viewModel: ChatListViewModel) {
-                    super({
-                        id: 'chat-example6',
-                        properties: {
-                            className: 'chat-example'
-                        }
-                    });
-
-                    this.viewModel = viewModel;
-                    this.current = this.viewModel.beginChat();
-
-                    this.appendChild(createElement(elementType.HTMLHeading4Element, { innerHTML: 'Example 6' }));
-
-                    this.list = new BoundComponent<HTMLDivElement, ChatListViewModel>(this.viewModel)
-                        .addClass('component chat-list')
-                        .setLoop('chats', `<div>
-                            <div>#<i-v>id</i-v> From:<i-v>fromName</i-v> at <i-v>created</i-v>. <i-v>subject</i-v></div>
-                            <div><i-v>stripped</i-v></div>
-                        </div>`)
-                        .observe(this.viewModel.chats)
-                        .render()
-                        .appendToParent(this);
-
-                    this.appendChild(createElement(elementType.HTMLBRElement));
-
-                    const subjectDisplay = new BoundComponent<HTMLDivElement, ChatViewModel>(this.current)
-                        .addClass('component chat-subject-display')
-                        .setTextTemplate('subject')
-                        .setVisibility('subject')
-                        .render();
-
-                    const subject = new BoundComponent<HTMLInputElement, ChatViewModel>(this.current, { type: elementType.HTMLInputElement })
-                        .addClass('component chat-subject')
-                        .setValueAttribute('subject')
-                        .addWriteTarget('subject')
-                        .addWriteEvent()
-                        .addCssClassSwitch('red', 'subject', true)
-                        .render();
-
-                    const from = new BoundComponent<HTMLInputElement, ChatViewModel>(this.current, { type: elementType.HTMLInputElement })
-                        .addClass('component chat-from')
-                        .setValueAttribute('fromName')
-                        .addWriteTarget('fromName')
-                        .addWriteEvent()
-                        .addCssClassSwitch('red', 'fromName', true)
-                        .render();
-
-                    const message = new BoundComponent<HTMLTextAreaElement, ChatViewModel>(this.current, { type: elementType.HTMLTextAreaElement })
-                        .addClass('component chat-message')
-                        .setValueAttribute('message')
-                        .addWriteTarget('message')
-                        .addWriteEvent()
-                        .addCssClassSwitch('red', 'message', true)
-                        .render();
-
-                    const closing = new BoundComponent<HTMLDivElement, ChatViewModel>(this.current)
-                        .addClass('component chat-closing')
-                        .setTemplate(`<i-v>closing</i-v> <br /> <i-v>fromName</i-v>`)
-                        .render();
-
-                    const button = new BoundComponent<HTMLButtonElement, ChatViewModel>(this.current,
-                        new InnerHtmlBindingOptions({
-                            type: elementType.HTMLButtonElement,
-                            properties: { innerHTML: 'Submit', type: 'submit' }
-                        }))
-                        .addClass('component chat-submit')
-                        .addBooleanAttributeMapping('disabled', 'invalid')
-                        .render();
-
-                    this.editor = {
-                        subjectDisplay, subject, from, message, closing, button
-                    };
-
-                    const editor = div('', {
-                        className: 'chat-editor'
-                    });
-                    const form = createElement(elementType.HTMLFormElement);
-                    form.appendChild(this.editor.subjectDisplay.content);
-                    form.appendChild(div('<span>From:</span>')).appendChild(this.editor.from.content);
-                    form.appendChild(div('<span>Subject:</span>')).appendChild(this.editor.subject.content);
-                    form.appendChild(div()).appendChild(this.editor.message.content);
-                    form.appendChild(this.editor.closing.content);
-                    form.appendChild(this.editor.button.content);
-                    form.addEventListener('submit', this.submit.bind(this));
-
-                    this.appendChild(editor).appendChild(form);
-                }
-                submit(evt: Event): void {
-                    evt.preventDefault();
-                    this.viewModel.addChat(this.current)
-                        .then(newchat => {
-                            Object.assign(this.current, newchat);
-                        })
-                        // tslint:disable-next-line:no-console
-                        .catch(err => console.error(err));
-                }
-            }
-
-            const example6View = new ChatView6(chatlist);
-            this.testArea.appendChild(example6View.content);
-
-            testComponent(example6View);
-            asyncAsserts.then(() => assertComponent(example6View, chatlist));
 
             this.log('Starting async tests');
             asyncAsserts.then(() => this.log(`TEST ${this.viewModel.testNumber}: Async tests succeeded`));

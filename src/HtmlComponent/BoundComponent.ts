@@ -20,6 +20,7 @@ import { IComponentBindingOptions } from './Options/IComponentBindingOptions';
 import { Kwarg, kw } from '../System/Types/KeywordArguments';
 import { e_ } from '../System/Utility/Elvis';
 import { EventHub } from '../System/EventHandler/EventHub';
+import { AttributeValue } from './Internal/AttributeValue';
 import { ReplacementValue } from './Internal/ReplacementValue';
 
 // This is only passed by loopPostProcess(), unless you write your own component class that does differently.
@@ -113,7 +114,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
     paused = false;
 
     private _id?: string;
-    private _attributeBindings: Array<{ attribute: string, source: string, bool: boolean, negative: boolean, otherComponentId?: string }> = [];
+    private _attributeBindings: Array<AttributeValue> = [];
     private _valueAttribute?: { source: string, otherComponentId?: string };
     private _writeTargets: string[] = []; // Can only write to THIS component
     private _cssClasses?: { cssClass: string, otherComponentId?: string };
@@ -172,8 +173,10 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
             }
         }
 
+        // TODO: Remove this. Use eval-based logic to refer to parent data
         this.loopParent = options.loopParent; // undefined in most cases
 
+        // TODO: Remove the whole loop + inject concept
         this._loopItemClass = options.loopItemClass || BoundComponent;
 
         this._configureComponentBindings();
@@ -315,23 +318,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         }
 
         for (const item of this._attributeBindings) {
-            if (item.bool) {
-                // For boolean attributes, the very existence of the attribute means it is considered to be true.
-                let val = this._getUntypedValue(item.source, item.otherComponentId);
-                if (item.negative) {
-                    val = !val;
-                } else {
-                    val = !!val;
-                }
-                if (val) {
-                    this.content.setAttribute(item.attribute, val);
-                } else {
-                    this.content.removeAttribute(item.attribute);
-                }
-
-            } else {
-                this.content.setAttribute(item.attribute, this._getStringValue(item.source, false, item.otherComponentId) || '');
-            }
+            item.render();
         }
 
         if (this._valueAttribute) {
@@ -517,43 +504,6 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         } else {
             this._cssDisplay = { source, negative, otherComponentId };
         }
-        if (update) { this.render(); }
-        return this;
-    }
-
-    addAttributeMapping(attribute: string, source: string = '.', update: boolean = false, otherComponentId?: string): this {
-        if (!source || !attribute) {
-            throw new Error('Invalid arguments');
-        }
-        // Don't bind a single property to multiple things
-        if (!this._attributeBindings.find(f => f.attribute === attribute)) {
-            this._attributeBindings.push({ attribute, source, bool: false, negative: false, otherComponentId });
-        }
-
-        if (update) { this.render(); }
-        return this;
-    }
-
-    addBooleanAttributeMapping(attribute: string, source: string = '.', negative: boolean = false, update: boolean = false, otherComponentId?: string): this {
-        if (!source || !attribute) {
-            throw new Error('Invalid arguments');
-        }
-        // Don't bind a single property to multiple things
-        if (!this._attributeBindings.find(f => f.attribute === attribute)) {
-            this._attributeBindings.push({ attribute, source, bool: true, negative, otherComponentId });
-        }
-
-        if (update) { this.render(); }
-        return this;
-    }
-
-    removeAttributeMapping(attribute: string, update: boolean = false): this {
-        if (!attribute) {
-            throw new Error('Invalid argument');
-        }
-        const filtered = this._attributeBindings.filter(f => f.attribute !== attribute);
-        this._attributeBindings.length = 0;
-        this._attributeBindings.push(...filtered);
         if (update) { this.render(); }
         return this;
     }
@@ -800,6 +750,16 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
 
         let textHtmlSet = false;
         for (const prop of currentAttributes) {
+            const result = AttributeValue.add(this, this.content, this.viewModel, this._attributeBindings, prop.name, prop.value, otherComponentId); // || NextValue.add() || NextValue.add();
+
+            // TODO: Remove "this." bindings
+            deferIfNeeded.call(this);
+
+            // TODO: for now, continue with legacy additions until all logic moved to objects
+            if (result) {
+                continue;
+            }
+
             const type = this._parseAttributeName(prop.name);
             let negative = false;
             // Regular attributes will all match this.
@@ -807,19 +767,6 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
                 continue;
             }
             switch (type.type) {
-                case "boolNegative":
-                    negative = true;
-                // fall through
-                case "bool":
-                    if (!type.detail) { throw new Error('Programming error'); }
-                    this.addBooleanAttributeMapping(type.detail, prop.value, negative, false, otherComponentId);
-                    deferIfNeeded.call(this);
-                    break;
-                case "attr":
-                    if (!type.detail) { throw new Error('Programming error'); }
-                    this.addAttributeMapping(type.detail, prop.value, false, otherComponentId);
-                    deferIfNeeded.call(this);
-                    break;
                 case "switchClassNegative":
                     negative = true;
                 // fall through
@@ -910,30 +857,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
             return;
         }
 
-        if (name.startsWith('i5_attr')) {
-            if (name[7] !== ':' && name[7] !== '_') {
-                throw new Error('Invalid attribute binding syntax');
-            }
-            if (name.length < 9) {
-                throw new Error("Binding attribute name is missing.");
-            }
-            return { type: 'attr', detail: name.slice(8) };
-
-        } else if (name.startsWith('i5_bool')) {
-            let negative = false;
-            if (name[7] !== ':' && name[7] !== '_' && name[7] !== '-' && name[7] !== '0') {
-                throw new Error('Invalid attribute binding syntax');
-            }
-            if (name[7] === '-' || name[7] === '0') {
-                negative = true;
-                name = name.slice(0, 7) + name.slice(8);
-            }
-            if (name.length < 9) {
-                throw new Error("Binding attribute name is missing.");
-            }
-            return { type: negative ? 'boolNegative' : 'bool', detail: name.slice(8) };
-
-        } else if (name.startsWith('i5_switch')) {
+        if (name.startsWith('i5_switch')) {
             let negative = false;
             if (name[9] !== ':' && name[9] !== '_' && name[9] !== '-' && name[9] !== '0') {
                 throw new Error('Invalid switch binding syntax');

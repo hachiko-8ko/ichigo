@@ -4,6 +4,7 @@ import { BoundComponent } from "../BoundComponent";
 
 export class ReplacementValue extends BaseValue implements IView<HTMLElement, any> {
     content: HTMLElement;
+    // TODO: Make this private (after "this." source is deleted)
     source: string;
     private _noescape: boolean;
     private _otherComponentId?: string;
@@ -17,7 +18,6 @@ export class ReplacementValue extends BaseValue implements IView<HTMLElement, an
         if (otherComponentId) {
             this._otherComponentId = otherComponentId;
         }
-
     }
 
     render(): void {
