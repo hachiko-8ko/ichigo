@@ -36,49 +36,6 @@ class TestViewModel extends TestCaseViewModel {
             <p>(A shadow root webcomponent helper is a task for another day, when I feel up to it. The standard has changed and many pages about it are now incorrect, so it's a chore.)</p>
 
             <h2>Usage</h2>
-            <pre><code>
-            class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel = any> extends Component<TElement> implements IView<TElement, TModel> {
-                static inject<TElement extends HTMLElement, TModel>(selector?: string | HTMLElement | NodeListOf<HTMLElement> | HTMLElement[] | {
-                    parent?: Element;
-                    selector: string;
-                }, options?: BoundInjectOptions<TModel>, constructor?: Constructable<BoundComponent<TElement, TModel>>, viewModel?: TModel): Array<BoundComponent<TElement, TModel>>;
-
-                static injectBind<TElement extends HTMLElement, TModel>(viewModel?: TModel, selector?: string | HTMLElement | NodeListOf<HTMLElement> | HTMLElement[] | {
-                    parent?: Element;
-                    selector: string;
-                }, options?: BoundInjectOptions<TModel>, constructor?: Constructable<BoundComponent<TElement, TModel>>): Array<BoundComponent<TElement, TModel>>;
-
-                constructor(viewModel: TModel);
-                constructor(viewModel: TModel, existingElement: IExistingElementOptions<TElement> & IComponentBindingOptions);
-                constructor(viewModel: TModel, existingElement: IExistingLookupOptions & IComponentBindingOptions);
-                constructor(viewModel: TModel, newElement: IInnerHtmlOptions & IComponentBindingOptions);
-                constructor(viewModel: TModel, outerElement: IOuterHtmlOptions & IComponentBindingOptions);
-                constructor(viewModel: TModel, newElement: string);
-
-                write(evt: Event): void;
-                observe(model?: any): this;
-                observeAll(model?: any): this;
-                render(): this;
-                setTemplate(templateText: string, update?: boolean): this;
-                setHtmlTemplate(templateProperty?: string, update?: boolean): this;
-                setTextTemplate(templateProperty?: string, update?: boolean): this;
-                setLoop(source: string, fragment: DocumentFragment | string, skipPostProcess?: boolean, update?: boolean): this;
-                removeLoop(update?: boolean): this;
-                setValueAttribute(source?: string | undefined, update?: boolean): this;
-                setVisibility(source?: string | undefined, negative?: boolean, update?: boolean): this;
-                addAttributeMapping(attribute: string, source?: string, update?: boolean): this;
-                addBooleanAttributeMapping(attribute: string, source?: string, negative?: boolean, update?: boolean): this;
-                removeAttributeMapping(attribute: string, update?: boolean): this;
-                setCssClass(cls?: string | undefined, update?: boolean): this;
-                setCssStyle(style?: string | undefined, update?: boolean): this;
-                addCssClassSwitch(cls: string, source?: string, negative?: boolean, update?: boolean): this;
-                removeCssClassSwitch(cls: string, update?: boolean): this;
-                addWriteEvent(): this;
-                addWriteTarget(target?: string, update?: boolean): this;
-                removeWriteTarget(target: string, update?: boolean): this;
-                protected loopPostProcess(row: any, addedContent: Node[], allRows: Iterable<any>, previousContent: DocumentFragment): void;
-            }
-            </code></pre>
 
             <p>The most basic constructor looks like this: new BoundComponent(viewModel).  The view model is any data type.  Normally it is expected to be an observable object, but it could be a simple string or number, if needed.</p>
 
@@ -102,8 +59,8 @@ class TestViewModel extends TestCaseViewModel {
             <li> i5_bool0_attributeName="property" or i5_bool-:attributeName="property" or :bool-:attributeName="property" - Remove boolean attribute attributeName if property is truthy
             <li> i5_style="property" or :style="property" - Set style string to property
             <li> i5_class="property" or :class="property" - Set classList string to property
-            <li> i5_switch_className="property" or i5_switch:className="property" or :switch:className="property" - If property is truthy, add className. If falsy, remove className
-            <li> i5_switch0_className="property" or i5_switch-:className="property" or :switch-:className="property" - Reverse of previous option
+            <li> i5_class_className="property" or i5_class:className="property" or :class:className="property" - If property is truthy, add className. If falsy, remove className
+            <li> i5_class0_className="property" or i5_class-:className="property" or :class-:className="property" - Reverse of previous option
             <li> i5_if="property" or :if="property" - If property is truthy, display:none applied. If falsy, removed (and possibly reset if switched on then off)
             <li> i5_if0="property" or :if-="property" - Reverse of previous option
             <li> i5_loop="property" or :loop="property" - Repeat element once for each item in property, calling loopPostProcess() after
@@ -171,20 +128,6 @@ export class Test010 extends TestCaseView {
                 }
             }).appendToParent(this.testArea);
             assert(comp3.classList.toString() === 'does-nothing', "CSS class attribute should be set");
-
-            // Like its base class, Component, it can be created with no rendering arguments, only the viewModel (which is required).
-            // If you do this, you'll need to pass in any dynamic attributes after the fact.
-            const comp4 = new BoundComponent(basicViewModel)
-                .appendToParent(this.testArea)
-                // These could be called at any point in time.
-                // SetTemplate completely wipes out any template previously set.
-                // It happens immediately, without any flash of unreplaced content.
-                .setTemplate('Hello <i-v>name</i-v>')
-                // Set update to true on the last call or call render() to make the changes visible.
-                // This doesn't happen on every execution because there could be a lot of them.
-                .setCssClass('cssClass', true);
-            assert(comp4.innerHTML === 'Hello <i-v>World</i-v>', 'setTemplate should replace the HTML template.');
-            assert(comp4.classList.toString() === 'does-nothing', "CSS class attribute should be set");
 
             // The normal way to create a component is not like the examples given before, but to
             // reference an existing HTML DOM element. While it is possible to set the properties
@@ -307,13 +250,13 @@ export class Test010 extends TestCaseView {
 
             // You can set the classList with i5_class, which we've already seen. If there are multiple classes, include them
             // separated by space, just like you do in HTML. This lets you turn classes on or off.
-            // You can also swtich classes on or off based on truthy/falsy values using i5_switch:class (or i5_switch_class).
-            const comp16 = new BoundComponent<HTMLDivElement, typeof basicViewModel>(basicViewModel, '<div id="comp16" i5_class="cssClasses" i5_switch_class-3="nothing" i5_switch:class-4="truthiness">Hello World</div>').appendToParent(this.testArea);
-            assert(comp16.className === 'class-1 class-2 class-4', 'Can switch classes on or off and set multiple classes');
+            // You can also swtich classes on or off based on truthy/falsy values using i5_class:className (or i5_class_className).
+            const comp16 = new BoundComponent<HTMLDivElement, typeof basicViewModel>(basicViewModel, '<div id="comp16" i5_class="cssClasses" i5_class_class-3="nothing" i5_class:class-4="truthiness">Hello World</div>').appendToParent(this.testArea);
+            assert(comp16.className === 'class-1 class-2 class-4', 'Can turn classes on or off and set multiple classes');
 
-            // A negative switch is follewed by a - or a 0 before the first colon.
-            const comp16a = new BoundComponent<HTMLDivElement, typeof basicViewModel>(basicViewModel, '<div id="comp16a" i5_switch0_class-3="trumpiness" i5_switch-:class-4="trumpiness" i5_switch-:class-5="truthiness">Hello World</div>').appendToParent(this.testArea);
-            assert(comp16a.className === 'class-3 class-4', 'Negative switches reverse switch logic');
+            // A negative switch is followed by a - or a 0 before the first colon.
+            const comp16a = new BoundComponent<HTMLDivElement, typeof basicViewModel>(basicViewModel, '<div id="comp16a" i5_class0_class-3="trumpiness" i5_class-:class-4="trumpiness" i5_class-:class-5="truthiness">Hello World</div>').appendToParent(this.testArea);
+            assert(comp16a.className === 'class-3 class-4', 'Negative className switches reverse logic');
 
             // i5_if can be used to make a component element visible or invisible, using display: none.
             const comp17a = new BoundComponent<HTMLDivElement, typeof basicViewModel>(basicViewModel, '<div id="comp17a" i5_if="truthiness">Hello World</div>').appendToParent(this.testArea);
@@ -541,13 +484,13 @@ export class Test010 extends TestCaseView {
                 },
                 attributes: {
                     i5_source: "comp22c",
-                    i5_switch0_passed: "falsy",
+                    i5_class0_passed: "falsy",
                     i5_if: "falsy",
                     i5_loop: "passFail"
                 }
             }).appendToParent(this.testArea);
 
-            assert(comp22e.content.className === "passed", "Other component can be used as source for :switch:class");
+            assert(comp22e.content.className === "passed", "Other component can be used as source for :class:class");
             assert(comp22e.content.style.display === "none", "Other component can be used as source for :if");
             assert(Array.from(comp22e.content.querySelectorAll("div")).length === 6 && comp22e.content.querySelector("div")!.innerText === "P", "Other component can be used as soruce for :loop");
 

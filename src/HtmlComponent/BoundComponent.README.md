@@ -98,11 +98,11 @@ Add/set the style string provided by the value of propertyName.
 * i5_class="propertyName"  
 Set the className string equal to the value of propertyName.
 
-* i5_switch:className="propertyName" or i5_switch_className="propertyName"  
+* i5_class:className="propertyName" or i5_class_className="propertyName"  
 If the value of propertyName is truthy, add className to classList. If falsy, remove className.
 
-* i5_switch-:className="propertyName" or i5_switch0_className="propertyName"  
-Negative switch, where truthy turns off the class and falsy turns it on.
+* i5_class-:className="propertyName" or i5_class0_className="propertyName"  
+Negative boolean className, where truthy turns off the class and falsy turns it on.
 
 WARNING: Browsers lowercase all attribute names, so all class names set in attributes must be lowercased.
 

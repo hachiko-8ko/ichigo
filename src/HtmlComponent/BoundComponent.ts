@@ -7,21 +7,22 @@ import { nodeListSelector, nodeListSelectorAll } from '../Html/QuerySelectorNode
 import { observableCheck } from '../Observable/IObservable';
 import { observablePropertyCheck } from '../Observable/ObservableProperty';
 import { observableStateCheck } from '../Observable/ObservableState';
+import { EventHub } from '../System/EventHandler/EventHub';
 import { Constructable, constructorTypeGuard } from '../System/Types/Constructable';
+import { Kwarg } from '../System/Types/KeywordArguments';
 import { isNone, None } from '../System/Types/NoneType';
+import { e_ } from '../System/Utility/Elvis';
 import { Component } from './Component';
 import { ComponentMap, getComponent } from './ComponentMap';
 import { IView } from './Contract/IView';
-import { IInnerHtmlOptions } from './Options/IInnerHtmlOptions';
+import { AttributeValue } from './Internal/AttributeValue';
+import { ClassValue } from './Internal/ClassValue';
+import { ReplacementValue } from './Internal/ReplacementValue';
+import { IComponentBindingOptions } from './Options/IComponentBindingOptions';
 import { IExistingElementOptions } from './Options/IExistingElementOptions';
 import { IExistingLookupOptions } from './Options/IExistingLookupOptions';
+import { IInnerHtmlOptions } from './Options/IInnerHtmlOptions';
 import { IOuterHtmlOptions } from './Options/IOuterHtmlOptions';
-import { IComponentBindingOptions } from './Options/IComponentBindingOptions';
-import { Kwarg, kw } from '../System/Types/KeywordArguments';
-import { e_ } from '../System/Utility/Elvis';
-import { EventHub } from '../System/EventHandler/EventHub';
-import { AttributeValue } from './Internal/AttributeValue';
-import { ReplacementValue } from './Internal/ReplacementValue';
 
 // This is only passed by loopPostProcess(), unless you write your own component class that does differently.
 export interface ILoopParent<TParent extends BoundComponent<HTMLElement, any> = BoundComponent<HTMLElement, any>> {
@@ -114,17 +115,16 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
     paused = false;
 
     private _id?: string;
-    private _attributeBindings: Array<AttributeValue> = [];
+    private _attributeBindings: AttributeValue[] = [];
     private _valueAttribute?: { source: string, otherComponentId?: string };
     private _writeTargets: string[] = []; // Can only write to THIS component
-    private _cssClasses?: { cssClass: string, otherComponentId?: string };
-    private _cssClassSwitches: Array<{ class: string, source: string, negative: boolean, otherComponentId?: string }> = [];
+    private _cssClasses: ClassValue[] = [];
     private _cssStyle?: { style: string, otherComponentId?: string };
     private _cssDisplay?: { source: string, negative: boolean, otherComponentId?: string };
     private _previousCssDisplaySetting?: string;
     private _loop?: { source: string, postProcess: boolean, fragment: DocumentFragment, otherComponentId?: string };
     private _loopItemClass: Constructable<BoundComponent>;
-    private _replacements: Array<ReplacementValue> = [];
+    private _replacements: ReplacementValue[] = [];
     private _async = false;
     private _defer = false;
     private _initialized = false;
@@ -326,21 +326,9 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
             this.value = this._getUntypedValue(this._valueAttribute.source, this._valueAttribute.otherComponentId);
         }
 
-        if (this._cssClasses) {
-            this.content.className = this._getStringValue(this._cssClasses.cssClass, false, this._cssClasses.otherComponentId) || '';
-        }
-
-        for (const item of this._cssClassSwitches) {
-            // If truthy, add class, else delete it.
-            let val = !!this._getUntypedValue(item.source, item.otherComponentId);
-            if (item.negative) {
-                val = !val;
-            }
-            if (val) {
-                this.content.classList.add(item.class);
-            } else {
-                this.content.classList.remove(item.class);
-            }
+        // To let className string and boolean switches to play together, set the className first and then modify using switches
+        for (const item of this._cssClasses.filter(f => f.baseClass).concat(this._cssClasses.filter(f => !f.baseClass))) {
+            item.render();
         }
 
         if (this._cssStyle) {
@@ -435,7 +423,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
 
             const noescape = repl.hasAttribute('noescape') && repl.getAttribute('noescape') !== 'false';
             const otherComponentId = repl.getAttribute('i5_source') || repl.getAttribute('source') || (repl as HTMLElement).dataset.i5_source || (repl as HTMLElement).dataset.source || repl.getAttribute(':source');
-            this._replacements.push(new ReplacementValue(this, this.viewModel, repl as HTMLElement, repl.innerHTML, noescape, otherComponentId));
+            this._replacements.push(new ReplacementValue({ component: this, viewModel: this.viewModel, element: repl as HTMLElement, source: repl.innerHTML, noescape, otherComponentId }));
         }
 
         // In the original build of the object, if any replacements start with "this." we need to defer.
@@ -508,38 +496,8 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         return this;
     }
 
-    setCssClass(cls: string | undefined = '.', update: boolean = false, otherComponentId?: string): this {
-        this._cssClasses = { cssClass: cls, otherComponentId };
-        if (update) { this.render(); }
-        return this;
-    }
-
     setCssStyle(style: string | undefined = '.', update: boolean = false, otherComponentId?: string): this {
         this._cssStyle = { style, otherComponentId };
-        if (update) { this.render(); }
-        return this;
-    }
-
-    addCssClassSwitch(cls: string, source: string = '.', negative: boolean = false, update: boolean = false, otherComponentId?: string): this {
-        if (!cls || !source) {
-            throw new Error('Invalid arguments');
-        }
-        // Don't bind a single property to multiple things
-        if (!this._cssClassSwitches.find(f => f.class === cls)) {
-            this._cssClassSwitches.push({ class: cls, source, negative, otherComponentId });
-        }
-
-        if (update) { this.render(); }
-        return this;
-    }
-
-    removeCssClassSwitch(cls: string, update: boolean = false): this {
-        if (!cls) {
-            throw new Error('Invalid argument');
-        }
-        const filtered = this._cssClassSwitches.filter(f => f.class !== cls);
-        this._cssClassSwitches.length = 0;
-        this._cssClassSwitches.push(...filtered);
         if (update) { this.render(); }
         return this;
     }
@@ -734,8 +692,8 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
                 value: m.value || ''
             }));
 
-        // Technically it's invalid to add custom attributes to regular elements, so technically <replace-me :switch:redtext="warning">
-        // is legal but if if it were a div, that would be illegal. So we'll allow <div data-i5_switch_redtext="warning">.
+        // Technically it's invalid to add custom attributes to regular elements, so technically <replace-me :class:redtext="warning">
+        // is legal but if if it were a div, that would be illegal. So we'll allow <div data-i5_class_redtext="warning">.
         // Note that the weird name handling of data attributes could break your code if you try to use this. You may need to do extra
         // work to make your code work, all in the name of strict adherence to standards. It's up to you.
         for (const attr of Object.getOwnPropertyNames(this.content.dataset)) {
@@ -750,7 +708,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
 
         let textHtmlSet = false;
         for (const prop of currentAttributes) {
-            const result = AttributeValue.add(this, this.content, this.viewModel, this._attributeBindings, prop.name, prop.value, otherComponentId); // || NextValue.add() || NextValue.add();
+            const result = AttributeValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, this._attributeBindings) || ClassValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, this._cssClasses);
 
             // TODO: Remove "this." bindings
             deferIfNeeded.call(this);
@@ -767,14 +725,6 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
                 continue;
             }
             switch (type.type) {
-                case "switchClassNegative":
-                    negative = true;
-                // fall through
-                case "switchClass":
-                    if (!type.detail) { throw new Error('Programming error'); }
-                    this.addCssClassSwitch(type.detail, prop.value, negative, false, otherComponentId);
-                    deferIfNeeded.call(this);
-                    break;
                 case "text":
                     if (textHtmlSet) { throw new Error("Can't set i5_text and i5_html at same time"); }
                     textHtmlSet = true;
@@ -800,10 +750,6 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
                     break;
                 case "style":
                     this.setCssStyle(prop.value, false, otherComponentId);
-                    deferIfNeeded.call(this);
-                    break;
-                case "class":
-                    this.setCssClass(prop.value, false, otherComponentId);
                     deferIfNeeded.call(this);
                     break;
                 case "input":
@@ -857,21 +803,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
             return;
         }
 
-        if (name.startsWith('i5_switch')) {
-            let negative = false;
-            if (name[9] !== ':' && name[9] !== '_' && name[9] !== '-' && name[9] !== '0') {
-                throw new Error('Invalid switch binding syntax');
-            }
-            if (name[9] === '-' || name[9] === '0') {
-                negative = true;
-                name = name.slice(0, 9) + name.slice(10);
-            }
-            if (name.length < 11) {
-                throw new Error("Class switch name is missing.");
-            }
-            return { type: negative ? 'switchClassNegative' : 'switchClass', detail: name.slice(10) };
-
-        } else if (name.startsWith('i5_if')) {
+        if (name.startsWith('i5_if')) {
             let negative = false;
             if (name.slice(-1) === '-' || name.slice(-1) === '0') {
                 negative = true;

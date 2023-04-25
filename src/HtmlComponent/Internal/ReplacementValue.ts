@@ -1,18 +1,15 @@
-import { BaseValue } from "./BaseValue";
-import { IView } from "../Contract/IView";
-import { BoundComponent } from "../BoundComponent";
+import { BoundComponent } from '../BoundComponent';
+import { BaseValue } from './BaseValue';
 
-export class ReplacementValue extends BaseValue implements IView<HTMLElement, any> {
-    content: HTMLElement;
+export class ReplacementValue extends BaseValue {
     // TODO: Make this private (after "this." source is deleted)
     source: string;
     private _noescape: boolean;
     private _otherComponentId?: string;
     private _currentContent?: string;
 
-    constructor(component: BoundComponent, viewModel: any, element: HTMLElement, source: string, noescape: boolean, otherComponentId?: string | null) {
-        super(component, viewModel);
-        this.content = element;
+    constructor({ component, viewModel, element, source, noescape, otherComponentId }: { component: BoundComponent, viewModel: any, element: HTMLElement, source: string, noescape: boolean, otherComponentId?: string | null }) {
+        super(component, viewModel, element);
         this.source = source;
         this._noescape = noescape;
         if (otherComponentId) {

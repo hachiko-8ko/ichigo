@@ -223,14 +223,14 @@ export class Test011 extends TestCaseView {
                             <div class="component chat-subject-display" :text="subject" :if="subject"></div>
                             <div>
                                 <span>From:</span>
-                                <input class="component chat-from" :input:="fromName" :switch-:red="fromName" />
+                                <input class="component chat-from" :input:="fromName" :class-:red="fromName" />
                             </div>
                             <div>
                                 <span>Subject:</span>
-                                <input class="component chat-subject" :input:="subject" :switch-:red="subject" />
+                                <input class="component chat-subject" :input:="subject" :class-:red="subject" />
                             </div>
                             <div>
-                                <textarea class="component chat-message" :input:="message" :switch-:red="message"></textarea>
+                                <textarea class="component chat-message" :input:="message" :class-:red="message"></textarea>
                             </div>
                             <div class="component chat-closing">
                                 <i-v>closing</i-v> <br />
@@ -383,7 +383,7 @@ export class Test011 extends TestCaseView {
                     const injected = Component.inject<HTMLDivElement>(`${parentId} chat-subject`, `
                         <div>
                             <span>Subject:</span>
-                            <input class="component chat-subject" :input:="subject" :switch-:red="subject" />
+                            <input class="component chat-subject" :input:="subject" :class-:red="subject" />
                         </div>
                         `)[0];
                     return new ChatSubject3(viewModel, { parent: injected.content, selector: 'input' });
@@ -395,7 +395,7 @@ export class Test011 extends TestCaseView {
                     const injected = Component.inject<HTMLDivElement>(`${parentId} chat-from`, `
                         <div>
                             <span>From:</span>
-                            <input class="component chat-from" :input:="fromName" :switch-:red="fromName" />
+                            <input class="component chat-from" :input:="fromName" :class-:red="fromName" />
                         </div>
                         `)[0];
                     return new ChatFrom3(viewModel, { parent: injected.content, selector: 'input' });
@@ -406,7 +406,7 @@ export class Test011 extends TestCaseView {
                 static add(viewModel: ChatViewModel, parentId: string): ChatMessage3 {
                     const injected = Component.inject<HTMLDivElement>(`${parentId} chat-message`, `
                         <div>
-                            <textarea class="component chat-message" :input:="message" :switch-:red="message"></textarea>
+                            <textarea class="component chat-message" :input:="message" :class-:red="message"></textarea>
                         </div>
                         `)[0];
                     return new ChatMessage3(viewModel, { parent: injected.content, selector: 'textarea' });
@@ -545,7 +545,7 @@ export class Test011 extends TestCaseView {
                     // As long as we don't reference this, we can do it before the super() call.
                     const wrapper = div(`
                             <span>Subject:</span>
-                            <input class="component chat-subject" :input:="subject" :switch-:red="subject" />
+                            <input class="component chat-subject" :input:="subject" :class-:red="subject" />
                     `);
                     parent.querySelector('.chat-subject')!.appendChild(wrapper);
 
@@ -560,7 +560,7 @@ export class Test011 extends TestCaseView {
                     // Again, wrapper HTML
                     const wrapper = div(`
                         <span>From:</span>
-                        <input class="component chat-from" :input:="fromName" :switch-:red="fromName" />
+                        <input class="component chat-from" :input:="fromName" :class-:red="fromName" />
                     `);
                     parent.querySelector('.chat-from')!.appendChild(wrapper);
 
@@ -574,7 +574,7 @@ export class Test011 extends TestCaseView {
                 constructor(viewModel: ChatViewModel, parent: HTMLDivElement) {
                     // Again, wrapper HTML
                     const wrapper = div(`
-                        <textarea class="component chat-message" :input:="message" :switch-:red="message"></textarea>
+                        <textarea class="component chat-message" :input:="message" :class-:red="message"></textarea>
                     `);
                     parent.querySelector('.chat-message')!.appendChild(wrapper);
 
@@ -728,7 +728,7 @@ export class Test011 extends TestCaseView {
                         attributes: {
                             class: 'component chat-subject',
                             i5_input_value: "subject",
-                            i5_switch0_red: "subject"
+                            i5_class0_red: "subject"
                         }
                     })).appendToParent(this);
                 }
@@ -746,7 +746,7 @@ export class Test011 extends TestCaseView {
                         attributes: {
                             class: 'component chat-from',
                             i5_input_value: "fromName",
-                            i5_switch0_red: "fromName"
+                            i5_class0_red: "fromName"
                         }
                     })).appendToParent(this);
                 }
@@ -764,7 +764,7 @@ export class Test011 extends TestCaseView {
                         attributes: {
                             class: 'component chat-message',
                             i5_input_value: "message",
-                            i5_switch0_red: "message"
+                            i5_class0_red: "message"
                         }
                     })).appendToParent(this);
                 }

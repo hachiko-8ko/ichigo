@@ -1,13 +1,14 @@
+import { escapeHtml } from '../../Html/EscapeHtml';
 import { FormFieldValue } from '../../Html/FormFieldValue';
 import { observablePropertyCheck } from '../../Observable/ObservableProperty';
-import { e_ } from '../../System/Utility/Elvis';
 import { observableStateCheck } from '../../Observable/ObservableState';
-import { escapeHtml } from '../../Html/EscapeHtml';
-import { None, isNone } from '../../System/Types/NoneType';
-import { getComponent } from '../ComponentMap';
+import { isNone, None } from '../../System/Types/NoneType';
+import { e_ } from '../../System/Utility/Elvis';
 import { BoundComponent } from '../BoundComponent';
+import { getComponent } from '../ComponentMap';
+import { IView } from '../Contract/IView';
 
-export abstract class BaseValue {
+export abstract class BaseValue implements IView<HTMLElement, any> {
     // TODO: Remove loopParent
     // Until I have removed the "this" source, we need a reference to the component itself
     // Until I have eliminated the parent (^) source, we need a reference to the loop parent
@@ -16,7 +17,7 @@ export abstract class BaseValue {
     }
 
     // TODO: Remove _temporaryComponent
-    constructor(protected _temporaryComponent: BoundComponent, public viewModel: any) {
+    constructor(protected _temporaryComponent: BoundComponent, public viewModel: any, public content: HTMLElement) {
 
     }
 
