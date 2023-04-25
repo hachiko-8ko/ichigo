@@ -25,6 +25,7 @@ export class AttributeValue extends BaseValue {
     attribute: string;
     private _bool: boolean;
     private _negative?: boolean;
+    private _currentValue?: string;
     // TODO: Remove otherComponentId
     private _otherComponentId?: string;
 
@@ -39,22 +40,36 @@ export class AttributeValue extends BaseValue {
     }
 
     render(): void {
-        if (this._bool) {
-            // For boolean attributes, the very existence of the attribute means it is considered to be true.
-            let val = this._getUntypedValue(this.source, this._otherComponentId);
-            if (this._negative) {
-                val = !val;
-            } else {
-                val = !!val;
+        if (!this._bool) {
+            const newValue = this._getStringValue(this.source, false, this._otherComponentId) || '';
+            // change detection depends on no outside processes updating the DOM
+            if (newValue !== this._currentValue) {
+                this._currentValue = newValue; // save a copy
+                this.content.setAttribute(this.attribute, newValue);
             }
-            if (val) {
+            return;
+        }
+
+        /* Boolean attributes */
+
+        // For boolean attributes, the very existence of the attribute means it is considered to be true.
+        let val = this._getUntypedValue(this.source, this._otherComponentId);
+        if (this._negative) {
+            val = !val;
+        } else {
+            val = !!val;
+        }
+        if (val) {
+            // change detection depends on no outside processes updating the DOM
+            if (!this._currentValue) {
+                this._currentValue = 'SET'; // save a copy
                 this.content.setAttribute(this.attribute, val);
-            } else {
+            }
+        } else {
+            if (this._currentValue) {
+                this._currentValue = ''; // update the copy
                 this.content.removeAttribute(this.attribute);
             }
-
-        } else {
-            this.content.setAttribute(this.attribute, this._getStringValue(this.source, false, this._otherComponentId) || '');
         }
     }
 }

@@ -1,7 +1,7 @@
 import { e_ } from '../../System/Utility/Elvis';
 import { observablePropertyCheck } from '../../Observable/ObservableProperty';
 import { observableStateCheck } from '../../Observable/ObservableState';
-import { FormFieldValue, getFormFieldValue, setFormFieldValue } from '../../Html/FormFieldValue';
+import { FormFieldValue, getFormFieldValue, setFormFieldValue, checkFormFieldEquality } from '../../Html/FormFieldValue';
 import { BaseValue } from './BaseValue';
 import { BoundComponent } from '../BoundComponent';
 
@@ -75,8 +75,12 @@ export class FormInputValue extends BaseValue {
     render(): void {
         // If only one-way writing from form to view model, there won't be a source, and render() will do nothing.
         if (this.source) {
-            const value = this._getUntypedValue(this.source, this._otherComponentId);
-            setFormFieldValue(this.content, value);
+            const newValue = this._getUntypedValue(this.source, this._otherComponentId);
+            // in this case, there's definitely outside processes updating the DOM, so we have to check
+            const currentValue = getFormFieldValue(this.content);
+            if (!checkFormFieldEquality(newValue, currentValue)) {
+                setFormFieldValue(this.content, newValue);
+            }
         }
     }
 

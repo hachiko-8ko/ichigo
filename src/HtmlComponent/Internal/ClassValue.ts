@@ -33,6 +33,7 @@ export class ClassValue extends BaseValue {
     className?: string;
 
     private _negative: boolean;
+    private _currentClass?: string;
     // TODO: Remove otherComponentId
     private _otherComponentId?: string;
 
@@ -50,9 +51,16 @@ export class ClassValue extends BaseValue {
 
     render(): void {
         if (this.baseClass) {
-            this.content.className = this._getStringValue(this.source, false, this._otherComponentId) || '';
+            const newValue = this._getStringValue(this.source, false, this._otherComponentId) || '';
+            // change detection depends on no outside processes updating the DOM
+            if (newValue !== this._currentClass) {
+                this._currentClass = newValue; // save a copy
+                this.content.className = newValue;
+            }
             return;
         }
+
+        /* Class switch case */
 
         // If truthy, add class, else delete it.
         let val = !!this._getUntypedValue(this.source, this._otherComponentId);
@@ -60,9 +68,16 @@ export class ClassValue extends BaseValue {
             val = !val;
         }
         if (val) {
-            this.content.classList.add(this.className || '');
+            // change detection depends on no outside processes updating the DOM
+            if (this.className && !this._currentClass) {
+                this._currentClass = 'SET'; // save a copy
+                this.content.classList.add(this.className);
+            }
         } else {
-            this.content.classList.remove(this.className || '');
+            if (this.className && this._currentClass) {
+                this._currentClass = ''; // update the copy
+                this.content.classList.remove(this.className || '');
+            }
         }
     }
 }

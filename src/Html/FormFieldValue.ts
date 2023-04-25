@@ -164,3 +164,15 @@ export function setFormFieldValue(element: HTMLElement, value: FormFieldValue): 
         return `${hour}:${minute}`;
     }
 }
+
+export function checkFormFieldEquality(val1: FormFieldValue, val2: FormFieldValue): boolean {
+    // almost every case
+    if (val1 === val2) {
+        return true;
+    }
+    // but there's one tricky case, which is multi-selects, which are string[]
+    if (Array.isArray(val1) && Array.isArray(val2)) {
+        return val1.length === val2.length && val1.every((v: string, i: number) => v === val2[i]);
+    }
+    return false;
+}

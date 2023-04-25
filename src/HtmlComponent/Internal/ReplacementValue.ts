@@ -51,9 +51,9 @@ export class ReplacementValue extends BaseValue {
 
     render(): void {
         const newValue = this._getStringValue(this.source, this._noescape, this._otherComponentId) || '';
-        // only update if changed
+        // change detection depends on no outside processes updating the DOM
         if (newValue !== this._currentContent) {
-            this._currentContent = newValue; // save a copy so we can get it without reading DOM
+            this._currentContent = newValue; // save a copy
             this.content.innerHTML = newValue;
         }
     }
