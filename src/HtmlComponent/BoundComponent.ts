@@ -395,36 +395,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         // If this is used to replace the existing template, we need to wipe out the previous values
         this._replacements.length = 0;
 
-        // Working on a clone here, so we don't see the body being built step by step in the browser.
-        for (const repl of clone.querySelectorAll('i-v')) {
-
-            // Allow 3 ways to reference a component, either by #id (for people who like quickness), by component (for people who like
-            // compliance), or by data-component (for people who REALLY like compliance)
-            let relatedComponentId = '';
-            // tslint:disable-next-line:prefer-for-of
-            for (let i = 0; i < repl.attributes.length; i++) {
-                const tmpName = repl.attributes[i].nodeName;
-                if (tmpName.startsWith('#')) {
-                    relatedComponentId = tmpName.slice(1);
-                    break;
-                }
-            }
-            if (!relatedComponentId && repl.hasAttribute('component')) {
-                relatedComponentId = (repl.getAttribute('component') || '');
-            }
-            if (!relatedComponentId) {
-                relatedComponentId = (repl as HTMLElement).dataset.component || '';
-            }
-
-            // If component is specified, this component must have that as an id
-            if (this._id && relatedComponentId && relatedComponentId.toLowerCase() !== this._id.toLowerCase()) {
-                continue;
-            }
-
-            const noescape = repl.hasAttribute('noescape') && repl.getAttribute('noescape') !== 'false';
-            const otherComponentId = repl.getAttribute('i5_source') || repl.getAttribute('source') || (repl as HTMLElement).dataset.i5_source || (repl as HTMLElement).dataset.source || repl.getAttribute(':source');
-            this._replacements.push(new ReplacementValue({ component: this, viewModel: this.viewModel, element: repl as HTMLElement, source: repl.innerHTML, noescape, otherComponentId }));
-        }
+        ReplacementValue.add(this, clone, this.viewModel, this._replacements, this._id);
 
         // In the original build of the object, if any replacements start with "this." we need to defer.
         // TODO: This probably needs to be expanded to eval() based sources too
