@@ -17,7 +17,7 @@ export abstract class BaseValue implements IView<HTMLElement, any> {
     }
 
     // TODO: Remove _temporaryComponent
-    constructor(protected _temporaryComponent: BoundComponent, public viewModel: any, public content: HTMLElement) {
+    constructor(protected _temporaryComponent: BoundComponent, public viewModel: any, public content: HTMLElement, public source: string) {
 
     }
 
@@ -43,7 +43,6 @@ export abstract class BaseValue implements IView<HTMLElement, any> {
             component = getComponent(sourceComponentId) || component;
         }
 
-        // I'm pretty sure this is being validated during construction but be safe
         if (!name) {
             return;
         }

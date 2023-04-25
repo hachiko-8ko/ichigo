@@ -23,16 +23,14 @@ export class AttributeValue extends BaseValue {
     }
 
     attribute: string;
-    private _source: string;
     private _bool: boolean;
     private _negative?: boolean;
     // TODO: Remove otherComponentId
     private _otherComponentId?: string;
 
     constructor({ component, content, viewModel, attribute, source, bool, negative, otherComponentId }: { component: BoundComponent, content: HTMLElement, viewModel: any, attribute: string, source: string, bool?: boolean, negative?: boolean, otherComponentId?: string }) {
-        super(component, viewModel, content);
+        super(component, viewModel, content, source);
         this.attribute = attribute;
-        this._source = source;
         this._bool = bool || false;
         this._negative = negative;
         if (otherComponentId) {
@@ -43,7 +41,7 @@ export class AttributeValue extends BaseValue {
     render(): void {
         if (this._bool) {
             // For boolean attributes, the very existence of the attribute means it is considered to be true.
-            let val = this._getUntypedValue(this._source, this._otherComponentId);
+            let val = this._getUntypedValue(this.source, this._otherComponentId);
             if (this._negative) {
                 val = !val;
             } else {
@@ -56,7 +54,7 @@ export class AttributeValue extends BaseValue {
             }
 
         } else {
-            this.content.setAttribute(this.attribute, this._getStringValue(this._source, false, this._otherComponentId) || '');
+            this.content.setAttribute(this.attribute, this._getStringValue(this.source, false, this._otherComponentId) || '');
         }
     }
 }

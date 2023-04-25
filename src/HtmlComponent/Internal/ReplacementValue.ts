@@ -37,15 +37,12 @@ export class ReplacementValue extends BaseValue {
         }
     }
 
-    // TODO: Make this private (after "this." source is deleted)
-    source: string;
     private _noescape: boolean;
     private _otherComponentId?: string;
     private _currentContent?: string;
 
     constructor({ component, viewModel, element, source, noescape, otherComponentId }: { component: BoundComponent, viewModel: any, element: HTMLElement, source: string, noescape: boolean, otherComponentId?: string | null }) {
-        super(component, viewModel, element);
-        this.source = source;
+        super(component, viewModel, element, source);
         this._noescape = noescape;
         if (otherComponentId) {
             this._otherComponentId = otherComponentId;

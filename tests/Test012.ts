@@ -134,28 +134,21 @@ export class Test012 extends TestCaseView {
             // That person might be you. But for adding a single bound element, it could work.
 
             const form = this.testArea.appendChild(createElement(elementType.HTMLFormElement));
-            const name = createElement(elementType.HTMLInputElement, { id: "name" })
+
+            const name = createElement(elementType.HTMLInputElement, { id: "name", i5_input_value: 'name' })
                 .bindComponent(testViewModel)
-                .setValueAttribute("name")
-                .addWriteTarget("name")
-                .addWriteEvent()
                 .observe(testViewModel.name)
                 .render()
                 .appendToParent(form);
-            const age = createElement(elementType.HTMLInputElement, { type: "number", id: "age" })
+            const age = createElement(elementType.HTMLInputElement, { type: "number", id: "age", i5_input_value: '.' })
                 .bindComponent(testViewModel.age)
-                .setValueAttribute() // defaults to .
-                .addWriteTarget() // defaults to .
-                .addWriteEvent()
                 .render()
                 .appendToParent(form);
-            const observed = createElement(elementType.HTMLInputElement, { id: "observed" }, { readonly: true })
+            const observed = createElement(elementType.HTMLInputElement, { id: "observed", i5_value: 'observed' }, { readonly: true })
                 .bindComponent(testViewModel)
-                .setValueAttribute("observed", true)
                 .appendToParent(form);
-            const friend = createElement(elementType.HTMLInputElement, { id: "friend" }, { readonly: true })
+            const friend = createElement(elementType.HTMLInputElement, { id: "friend", i5_value: 'friendsName' }, { readonly: true })
                 .bindComponent(testViewModel)
-                .setValueAttribute("friendsName", true)
                 .appendToParent(form);
 
             assert(name.value === "My Name", "Element binding is in place");

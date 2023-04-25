@@ -17,6 +17,7 @@ import { ComponentMap, getComponent } from './ComponentMap';
 import { IView } from './Contract/IView';
 import { AttributeValue } from './Internal/AttributeValue';
 import { ClassValue } from './Internal/ClassValue';
+import { FormInputValue } from './Internal/FormInputValue';
 import { ReplacementValue } from './Internal/ReplacementValue';
 import { IComponentBindingOptions } from './Options/IComponentBindingOptions';
 import { IExistingElementOptions } from './Options/IExistingElementOptions';
@@ -116,11 +117,10 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
 
     private _id?: string;
     private _attributeBindings: AttributeValue[] = [];
-    private _valueAttribute?: { source: string, otherComponentId?: string };
-    private _writeTargets: string[] = []; // Can only write to THIS component
     private _cssClasses: ClassValue[] = [];
     private _cssStyle?: { style: string, otherComponentId?: string };
     private _cssDisplay?: { source: string, negative: boolean, otherComponentId?: string };
+    private _formInputValue?: FormInputValue;
     private _previousCssDisplaySetting?: string;
     private _loop?: { source: string, postProcess: boolean, fragment: DocumentFragment, otherComponentId?: string };
     private _loopItemClass: Constructable<BoundComponent>;
@@ -196,78 +196,6 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         this._initialized = true;
     }
 
-    write(evt: Event): void {
-        if (!this._writeTargets.length) {
-            return;
-        }
-        const element = evt.currentTarget as HTMLElement;
-        if (!element) {
-            return;
-        }
-        const value = getFormFieldValue(element);
-
-        // There are two cases where value is undefined. Either the element is not a form element or it's an unnamed radio button
-        // that is not selected. In both cases, we don't want to update the model with undefined, which is useless.
-        // TODO: Is this justification valid?
-        if (value === undefined) {
-            return;
-        }
-
-        // WARN: Cannot type check this dynamically. TypeScript is build-time checking only. Runtime code can't even see the type.
-        // If you want to be precise, all properties in _writeBindings should be FormItemValue, but as _writeBindings is populated
-        // via string, there's no way to enforce that. So if you fill a string value from a multiple select, it'll produce bugs.
-        // So be careful. It's on you.
-        for (const bind of this._writeTargets) {
-            if (bind.startsWith('this.')) {
-                const target = (this as Record<string, any>)[bind.slice(5)];
-                writeValue(target, () => (this as Record<string, any>)[bind.slice(5)] = value, this);
-            } else if (bind === '.') {
-                if (observableStateCheck<any>(this.viewModel)) {
-                    this.viewModel.value = value;
-                } else {
-                    // Assume that the view model is either FormFieldValue or a function that takes one.
-                    writeValue(this.viewModel, () => this.viewModel = value as any, this.viewModel);
-                }
-            } else if (bind.startsWith('^') && e_(this.loopParent).viewModel && typeof this.loopParent!.viewModel === 'object') {
-                // Note: Not doing a '^' by itself because that's a pretty BS case. If this is the loop child, the parent is probably
-                // an object or an iterable, not really something you'll read or write to directly.
-                // Might do a shortcut to the parent component's 'this'
-                writeToViewModelObject(this.loopParent!, bind.slice(1));
-            } else if (typeof this.viewModel === 'object') {
-                writeToViewModelObject(this, bind);
-            }
-        }
-
-        function writeValue(target: any, writeToProperty: () => void, thisArg: any) {
-            if (typeof target === 'function') {
-                target.call(thisArg, value);
-                return;
-            }
-            if (observablePropertyCheck<FormFieldValue>(target)) {
-                target.value = value;
-                return;
-            }
-            // This needs to be a function to be flexible, because if target is a value type or immutable, writing
-            // it directly replaces only the value without updating the model.
-            writeToProperty();
-        }
-
-        function writeToViewModelObject(comp: BoundComponent, property: string) {
-            if (observableStateCheck<any>(comp.viewModel)) {
-                // With observable state, we need to get the state, update it, and write the whole thing back.
-                // While it is possible to update a single property in some cases, it doesn't allow reuse of already-working code.
-                const tmp = comp.viewModel.value;
-                const target = tmp[property];
-                writeValue(target, () => tmp[property] = value, tmp);
-                comp.viewModel.value = tmp;
-
-            } else {
-                const target = (comp.viewModel as Record<string, any>)[property];
-                writeValue(target, () => (comp.viewModel as Record<string, any>)[property] = value, comp.viewModel);
-            }
-        }
-    }
-
     /**
      * Bind this.render() to the model passed in. There is no option to use the viewModel because that would require
      * the user to pass in doNotSubscribe = true and then subscribe it to the exact same thing. It'd be stupid.
@@ -321,9 +249,8 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
             item.render();
         }
 
-        if (this._valueAttribute) {
-            // Calls setFormFieldValue behind the scenes.
-            this.value = this._getUntypedValue(this._valueAttribute.source, this._valueAttribute.otherComponentId);
+        if (this._formInputValue) {
+            this._formInputValue.render();
         }
 
         // To let className string and boolean switches to play together, set the className first and then modify using switches
@@ -451,12 +378,6 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         return this;
     }
 
-    setValueAttribute(source: string | undefined = '.', update: boolean = false, otherComponentId?: string): this {
-        this._valueAttribute = { source, otherComponentId };
-        if (update) { this.render(); }
-        return this;
-    }
-
     setVisibility(source: string | undefined = '.', negative: boolean = false, update: boolean = false, otherComponentId?: string): this {
         if (!source) {
             this._cssDisplay = undefined;
@@ -469,34 +390,6 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
 
     setCssStyle(style: string | undefined = '.', update: boolean = false, otherComponentId?: string): this {
         this._cssStyle = { style, otherComponentId };
-        if (update) { this.render(); }
-        return this;
-    }
-
-    addWriteEvent(): this {
-        this.content.addEventListener('input', this.write.bind(this));
-        return this;
-    }
-
-    addWriteTarget(target: string = '.', update: boolean = false): this {
-        if (!target) {
-            throw new Error('Invalid argument');
-        }
-        // Don't bind a single property to multiple things
-        if (!this._writeTargets.find(f => f === target)) {
-            this._writeTargets.push(target);
-        }
-        if (update) { this.render(); }
-        return this;
-    }
-
-    removeWriteTarget(target: string, update: boolean = false): this {
-        if (!target) {
-            throw new Error('Invalid argument');
-        }
-        const filtered = this._writeTargets.filter(f => f !== target);
-        this._writeTargets.length = 0;
-        this._writeTargets.push(...filtered);
         if (update) { this.render(); }
         return this;
     }
@@ -657,17 +550,27 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
 
     private _configureComponentBindings() {
         const currentAttributes = Array.from(this.content.attributes)
-            .filter(f => f.value || f.name === 'i5_input' || f.name === ':input')
+            .filter(f => f.name.startsWith(':') || f.name.startsWith('i5_'))
+            .filter(f => f.value || f.name === ':input' || f.name === 'i5_input')
             .map(m => ({
                 name: m.name,
                 value: m.value || ''
             }));
 
+        // It's often easier to add properties than attributes (just because this library is property-centric) but props don't appear
+        // in this.content.attributes.
+        for (const propName of Object.getOwnPropertyNames(this.content).filter(f => f.startsWith(':') || f.startsWith('i5_'))) {
+            const value = (this.content as any)[propName];
+            if (value || propName === ':input' || propName === 'i5_input') {
+                currentAttributes.push({ name: propName, value: value || '' });
+            }
+        }
+
         // Technically it's invalid to add custom attributes to regular elements, so technically <replace-me :class:redtext="warning">
         // is legal but if if it were a div, that would be illegal. So we'll allow <div data-i5_class_redtext="warning">.
         // Note that the weird name handling of data attributes could break your code if you try to use this. You may need to do extra
         // work to make your code work, all in the name of strict adherence to standards. It's up to you.
-        for (const attr of Object.getOwnPropertyNames(this.content.dataset)) {
+        for (const attr of Object.getOwnPropertyNames(this.content.dataset).filter(f => f.startsWith(':') || f.startsWith('i5_'))) {
             const value = this.content.dataset[attr];
             if (value || attr === 'i5_input') {
                 currentAttributes.push({ name: attr, value: value || '' });
@@ -679,7 +582,9 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
 
         let textHtmlSet = false;
         for (const prop of currentAttributes) {
-            const result = AttributeValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, this._attributeBindings) || ClassValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, this._cssClasses);
+            const result = AttributeValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, this._attributeBindings) ||
+                ClassValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, this._cssClasses) ||
+                FormInputValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, () => this._formInputValue, (val: FormInputValue) => this._formInputValue = val);
 
             // TODO: Remove "this." bindings
             deferIfNeeded.call(this);
@@ -708,10 +613,6 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
                     this.content.innerHTML = `<i-v noescape>${prop.value}</i-v>`; // Use this as the template
                     deferIfNeeded.call(this);
                     break;
-                case "value":
-                    this.setValueAttribute(prop.value, false, otherComponentId);
-                    deferIfNeeded.call(this);
-                    break;
                 case "ifNegative":
                     negative = true;
                 // fall through
@@ -721,20 +622,6 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
                     break;
                 case "style":
                     this.setCssStyle(prop.value, false, otherComponentId);
-                    deferIfNeeded.call(this);
-                    break;
-                case "input":
-                    this.addWriteEvent();
-                    if (!prop.value) {
-                        break;
-                        // Else fall through, using the value of the input attribute as a target attribute
-                        // Shortcut i5_input_foo is the same as i5_target="foo" i5_value="foo"
-                        // But only write to the local view model, not another component's
-                    } else if (type.detail) {
-                        this.setValueAttribute(prop.value, false);
-                    }
-                case "target":
-                    this.addWriteTarget(prop.value, false);
                     deferIfNeeded.call(this);
                     break;
                 case "loop":
@@ -764,6 +651,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
             // This is used to indicate an item component, nothing else.
             return;
         } else if (name === 'i5_source') {
+            // TODO: Remove this
             // This is used to indicate a source component. It's read separately.
             return;
         }
@@ -786,13 +674,6 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
                 return { type: 'loop', detail: 'null' };
             }
             return { type: 'loop' };
-
-        } else if (name.startsWith('i5_target')) {
-            return ({ type: 'target' });
-
-        } else if (name.startsWith('i5_input')) {
-            const twoWay = name.endsWith('_value') || name.endsWith(':');
-            return ({ type: 'input', detail: twoWay ? '2way' : '' });
 
         }
 

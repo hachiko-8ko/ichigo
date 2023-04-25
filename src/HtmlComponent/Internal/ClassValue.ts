@@ -32,17 +32,15 @@ export class ClassValue extends BaseValue {
     baseClass: boolean;
     className?: string;
 
-    private _source: string;
     private _negative: boolean;
     // TODO: Remove otherComponentId
     private _otherComponentId?: string;
 
     constructor({ component, content, viewModel, source, baseClass, className, negative, otherComponentId }: { component: BoundComponent, content: HTMLElement, viewModel: any, source: string, baseClass?: boolean, className?: string, negative?: boolean, otherComponentId?: string }) {
-        super(component, viewModel, content);
+        super(component, viewModel, content, source);
         this.baseClass = baseClass || false;
         this.className = className;
 
-        this._source = source;
         this._negative = negative || false;
 
         if (otherComponentId) {
@@ -52,12 +50,12 @@ export class ClassValue extends BaseValue {
 
     render(): void {
         if (this.baseClass) {
-            this.content.className = this._getStringValue(this._source, false, this._otherComponentId) || '';
+            this.content.className = this._getStringValue(this.source, false, this._otherComponentId) || '';
             return;
         }
 
         // If truthy, add class, else delete it.
-        let val = !!this._getUntypedValue(this._source, this._otherComponentId);
+        let val = !!this._getUntypedValue(this.source, this._otherComponentId);
         if (this._negative) {
             val = !val;
         }
