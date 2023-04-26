@@ -14,7 +14,7 @@ export class ConditionalDisplayValue extends BaseValue {
         }
 
         if (!attrValue) {
-            throw new Error('Class source is missing.');
+            throw new Error('Display source is missing.');
         }
 
         // If we passed the bound component directly, we could just read/update it, but that tight binding makes it hard to do this rewrite.

@@ -20,6 +20,7 @@ import { ClassValue } from './Internal/ClassValue';
 import { ConditionalDisplayValue } from './Internal/ConditionalDisplayValue';
 import { FormInputValue } from './Internal/FormInputValue';
 import { ReplacementValue } from './Internal/ReplacementValue';
+import { StyleValue } from './Internal/StyleValue';
 import { IComponentBindingOptions } from './Options/IComponentBindingOptions';
 import { IExistingElementOptions } from './Options/IExistingElementOptions';
 import { IExistingLookupOptions } from './Options/IExistingLookupOptions';
@@ -113,13 +114,14 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
     }
 
     viewModel: TModel;
+    // TODO: Remove this and the TParent type
     loopParent?: TParent; // only sent when this is a component child creted by loopPostProcess
     paused = false;
 
     private _id?: string;
     private _attributeBindings: AttributeValue[] = [];
     private _cssClasses: ClassValue[] = [];
-    private _cssStyle?: { style: string, otherComponentId?: string };
+    private _cssStyle?: StyleValue;
     private _conditionalDisplay?: ConditionalDisplayValue;
     private _formInputValue?: FormInputValue;
     private _loop?: { source: string, postProcess: boolean, fragment: DocumentFragment, otherComponentId?: string };
@@ -259,12 +261,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         }
 
         if (this._cssStyle) {
-            const val = this._getStringValue(this._cssStyle.style, false, this._cssStyle.otherComponentId) || '';
-            this.content.style.cssText = val;
-            if (val && !this.content.style.cssText) {
-                // tslint:disable-next-line:no-console
-                console.warn(`Invalid style text in component: ${val}`);
-            }
+            this._cssStyle.render();
         }
 
         if (this._loop) {
@@ -287,7 +284,9 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
             this._conditionalDisplay.render();
         }
 
-        this._updateHtmlReplacements();
+        for (const repl of this._replacements) {
+            repl.render();
+        }
         return this;
     }
 
@@ -324,7 +323,9 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
             // Replace the completed values before adding to the visible page. This is slightly redundant, because this happens in the render()
             // step, but I hate it when I see a flash of unreplaced content on sites.
             // The reason this works is because _replacements references clone, which isn't visible until almost the last line.
-            this._updateHtmlReplacements();
+            for (const repl of this._replacements) {
+                repl.render();
+            }
         }
 
         // Populate the front-end text. Only do this if there is at least one thing to replace. Otherwise, you're just wiping out perfectly
@@ -363,41 +364,6 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
     removeLoop(update: boolean = false): this {
         this._loop = undefined;
         if (update) { this.render(); }
-        return this;
-    }
-
-    setCssStyle(style: string | undefined = '.', update: boolean = false, otherComponentId?: string): this {
-        this._cssStyle = { style, otherComponentId };
-        if (update) { this.render(); }
-        return this;
-    }
-
-    /**
-     * 
-     * Auto-Inject calls the default injectBind() on the default BoundComponent class, with no options except selector.
-     * If you pass no inputs, it seeks out all child elements that have at least one ichigo custom property. Keep in mind
-     * that when you have nested objects, this will usually mean something will blow up because you tried to bind an element 
-     * twice. It also will perform much worse.
-     * 
-     * If you pass a selector, it acts the same as BoundComponent.injectBind() with that selector.
-     * 
-     * In my experience, this is almost completely useless. Either the lack of options breaks it (pretty useless if you can't
-     * observe an observable) or the simple act of binding breaks stuff.
-     */
-    autoInject(selector?: string): this {
-        if (selector) {
-            BoundComponent.injectBind(this.viewModel, selector, { parent: this.content });
-        } else {
-            for (const e of this.content.querySelectorAll<HTMLElement>('*')) {
-                for (const attr of Array.from(e.attributes)) {
-                    if (attr.name.startsWith('i5_') || attr.name.startsWith(':') || attr.name.startsWith('data-i5_')) {
-                        BoundComponent.injectBind(this.viewModel, e);
-                        break;
-                    }
-                }
-            }
-        }
-
         return this;
     }
 
@@ -440,17 +406,6 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
             loopParent: this,
             async: this._async
         } as IComponentBindingOptions & ILoopParent<typeof thisclass>);
-    }
-
-    private _getStringValue(name: string, skipEscape: boolean = false, sourceComponentId?: string): string | None {
-        const value = this._getUntypedValue(name, sourceComponentId);
-        if (isNone(value)) {
-            return value;
-        } else if (typeof value === 'string') {
-            return skipEscape ? value : escapeHtml(value);
-        } else {
-            return skipEscape ? value.toString() : escapeHtml(value.toString());
-        }
     }
 
     private _getUntypedValue(name: string, sourceComponentId?: string): any {
@@ -520,12 +475,6 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         }
     }
 
-    private _updateHtmlReplacements(): void {
-        for (const repl of this._replacements) {
-            repl.render();
-        }
-    }
-
     private _configureComponentBindings() {
         const currentAttributes = Array.from(this.content.attributes)
             .filter(f => f.name.startsWith(':') || f.name.startsWith('i5_'))
@@ -562,6 +511,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         for (const prop of currentAttributes) {
             const result = AttributeValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, this._attributeBindings) ||
                 ClassValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, this._cssClasses) ||
+                StyleValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, () => this._cssStyle, (val: StyleValue) => this._cssStyle = val) ||
                 ConditionalDisplayValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, () => this._conditionalDisplay, (val: ConditionalDisplayValue) => this._conditionalDisplay = val) ||
                 FormInputValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, () => this._formInputValue, (val: FormInputValue) => this._formInputValue = val);
 
@@ -589,10 +539,6 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
                     if (textHtmlSet) { throw new Error("Can't set i5_text and i5_html at same time"); }
                     textHtmlSet = true;
                     this.content.innerHTML = `<i-v noescape>${prop.value}</i-v>`; // Use this as the template
-                    deferIfNeeded.call(this);
-                    break;
-                case "style":
-                    this.setCssStyle(prop.value, false, otherComponentId);
                     deferIfNeeded.call(this);
                     break;
                 case "loop":
