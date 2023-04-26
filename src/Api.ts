@@ -64,3 +64,6 @@ export * from './System/Utility/IsInteger';
 export * from './System/Utility/IsPrimitive';
 export * from './System/Utility/GetUniqueId';
 export * from './System/Utility/ObjectFullAssign';
+
+// TODO: Remove this
+export { ILoopParent } from './HtmlComponent/Internal/LoopValue';

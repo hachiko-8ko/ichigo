@@ -331,20 +331,19 @@ export class Test010 extends TestCaseView {
 
             let loopcalled21a = 0;
 
-            // To do your own logic, override the method loopPostProcess. loopPostProcess() is called once for each row in the iterable.
-            class LoopComponent1 extends BoundComponent<HTMLDivElement, string[]> {
-                protected loopPostProcess(row: any, addedContent: Node[], allRows: Iterable<any>, previousContent: DocumentFragment): void {
-                    loopcalled21a++; // simple counter
+            // To do your own logic, pass in a function in the loopPostProcess option. loopPostProcess() is called once for each row in the iterable.
+            function loopPostProcess(row: any, addedContent: Node[], allRows: Iterable<any>, previousContent: DocumentFragment): void {
+                loopcalled21a++; // simple counter
 
-                    nodeListSelector(addedContent, 'span')!.innerHTML = row; // fill first span in the added content with current value
-                    const rows = Array.from(allRows);
-                    // If the last item in the iterable, add a period. This logic depends on the items being unique.
-                    if (rows.indexOf(row) === rows.length - 1) {
-                        nodeListSelectorAll(addedContent, 'span')[1].innerHTML = '.';
-                    }
+                nodeListSelector(addedContent, 'span')!.innerHTML = row; // fill first span in the added content with current value
+                const rows = Array.from(allRows);
+                // If the last item in the iterable, add a period. This logic depends on the items being unique.
+                if (rows.indexOf(row) === rows.length - 1) {
+                    nodeListSelectorAll(addedContent, 'span')[1].innerHTML = '.';
                 }
             }
-            const comp21a = new LoopComponent1(['One', 'Two', 'Three'], '<div id="comp21a" i5_loop=".">A <span>span content</span><span>,</span> </div>').appendToParent(this.testArea);
+
+            const comp21a = new BoundComponent<HTMLDivElement, string[]>(['One', 'Two', 'Three'], { outerHtml: '<div id="comp21a" i5_loop=".">A <span>span content</span><span>,</span> </div>', loopPostProcess }).appendToParent(this.testArea);
             assert(loopcalled21a === 3, 'Manual loop was called once per row');
             assert(comp21a.innerHTML === "A <span>One</span><span>,</span> A <span>Two</span><span>,</span> A <span>Three</span><span>.</span> ", 'Manual loop should get the correct inputs and be able to modify the output.');
 

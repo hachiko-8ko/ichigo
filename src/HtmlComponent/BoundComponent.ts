@@ -19,6 +19,7 @@ import { AttributeValue } from './Internal/AttributeValue';
 import { ClassValue } from './Internal/ClassValue';
 import { ConditionalDisplayValue } from './Internal/ConditionalDisplayValue';
 import { FormInputValue } from './Internal/FormInputValue';
+import { LoopValue } from './Internal/LoopValue';
 import { ReplacementValue } from './Internal/ReplacementValue';
 import { StyleValue } from './Internal/StyleValue';
 import { IComponentBindingOptions } from './Options/IComponentBindingOptions';
@@ -26,11 +27,6 @@ import { IExistingElementOptions } from './Options/IExistingElementOptions';
 import { IExistingLookupOptions } from './Options/IExistingLookupOptions';
 import { IInnerHtmlOptions } from './Options/IInnerHtmlOptions';
 import { IOuterHtmlOptions } from './Options/IOuterHtmlOptions';
-
-// This is only passed by loopPostProcess(), unless you write your own component class that does differently.
-export interface ILoopParent<TParent extends BoundComponent<HTMLElement, any> = BoundComponent<HTMLElement, any>> {
-    loopParent?: TParent;
-}
 
 export type BoundInjectOptions<TModel = any, TItem extends BoundComponent<HTMLElement, any> = BoundComponent<HTMLElement, any>> = IComponentBindingOptions<TModel, TItem> &
     (
@@ -114,9 +110,9 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
     }
 
     viewModel: TModel;
-    // TODO: Remove this and the TParent type
-    loopParent?: TParent; // only sent when this is a component child creted by loopPostProcess
     paused = false;
+    // TODO: Remove this and the TParent type. Use eval-based logic to refer to parent data
+    loopParent?: TParent; // only sent when this is a component child creted by loopPostProcess
 
     private _id?: string;
     private _attributeBindings: AttributeValue[] = [];
@@ -124,9 +120,9 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
     private _cssStyle?: StyleValue;
     private _conditionalDisplay?: ConditionalDisplayValue;
     private _formInputValue?: FormInputValue;
-    private _loop?: { source: string, postProcess: boolean, fragment: DocumentFragment, otherComponentId?: string };
-    private _loopItemClass: Constructable<BoundComponent>;
+    private _loop?: LoopValue;
     private _replacements: ReplacementValue[] = [];
+
     private _async = false;
     private _defer = false;
     private _initialized = false;
@@ -165,23 +161,13 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         this._defer = options.defer || false;
         this._id = this.content.id;
 
-        // Defined the default component class for the default loopPostProcess() method
-        if (options.loopItemClass) {
-            if (!constructorTypeGuard(options.loopItemClass)) {
-                throw new Error('loopItemClass is not a constructor');
-            }
-            if (!(options.loopItemClass instanceof BoundComponent.constructor)) {
-                throw new Error('loopItemClass is not an bound component');
-            }
-        }
-
         // TODO: Remove this. Use eval-based logic to refer to parent data
         this.loopParent = options.loopParent; // undefined in most cases
 
-        // TODO: Remove the whole loop + inject concept
-        this._loopItemClass = options.loopItemClass || BoundComponent;
-
-        this._configureComponentBindings();
+        if (options.loopPostProcess) {
+            options.loopPostProcess = options.loopPostProcess.bind(this);
+        }
+        this._configureComponentBindings(options.loopItemClass, options.loopPostProcess);
 
         this.setTemplate(this.content.innerHTML); // InnerHTML is currently only parsed and then the original text is thrown away.
 
@@ -265,19 +251,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         }
 
         if (this._loop) {
-            const iterable = this._getUntypedValue(this._loop.source, this._loop.otherComponentId);
-            if (iterable && typeof iterable[Symbol.iterator] === 'function') {
-                const previousContent = extractNodeContent(this.content);
-                for (const row of iterable) {
-                    const clone = document.importNode(this._loop.fragment, true);
-                    // As soon as we add the clone to content, childNodes loses reference to its child nodes, so copy it.
-                    const nodes = Array.from(clone.childNodes).slice();
-                    this.content.appendChild(clone);
-                    if (this._loop.postProcess) {
-                        this.loopPostProcess(row, nodes, iterable, previousContent);
-                    }
-                }
-            }
+            this._loop.render();
         }
 
         if (this._conditionalDisplay) {
@@ -349,24 +323,6 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         return this.setTemplate('<i-v>' + templateProperty + '</i-v>', update);
     }
 
-    setLoop(source: string = '.', fragment: DocumentFragment | string, skipPostProcess: boolean = false, update: boolean = false, otherComponentId?: string): this {
-        if (!source || !fragment) {
-            throw new Error('Invalid arguments');
-        }
-        if (typeof fragment === 'string') {
-            fragment = createFragment(fragment);
-        }
-        this._loop = { source, postProcess: !skipPostProcess, fragment, otherComponentId };
-        if (update) { this.render(); }
-        return this;
-    }
-
-    removeLoop(update: boolean = false): this {
-        this._loop = undefined;
-        if (update) { this.render(); }
-        return this;
-    }
-
     /**
      * Override this method to unbind a view from an observable.
      */
@@ -376,106 +332,10 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         }
     }
 
-    /**
-     * Override this if you need to do something else after the loop is added to the DOM.
-     */
-    protected loopPostProcess(row: any, addedContent: Node[], allRows: Iterable<any>, previousContent: DocumentFragment): void {
-        if (!addedContent.length) {
-            return;
-        }
-
-        // If the typescript part of the following were important, this would be a problem
-        // if this were a derived class.
-        const thisclass = this;
-        const nodes = nodeListSelectorAll(addedContent, '[i5_item], [\\00003Aitem], [data-i5_item]');
-
-        // If no i5_item matches, then grab the first element.
-        if (!nodes.length) {
-            const firstNode = nodeListSelector(addedContent, '*');
-            if (firstNode) {
-                nodes.push(firstNode);
-            }
-        }
-
-        if (!nodes.length) {
-            return;
-        }
-
-        (this._loopItemClass as typeof BoundComponent).injectBind(row, nodes, {
-            replace: false,
-            loopParent: this,
-            async: this._async
-        } as IComponentBindingOptions & ILoopParent<typeof thisclass>);
-    }
-
-    private _getUntypedValue(name: string, sourceComponentId?: string): any {
-        let component: any = this;
-        let source: any;
-
-        if (sourceComponentId) {
-            component = getComponent(sourceComponentId) || component;
-        }
-
-        // I'm pretty sure this is being validated during construction but be safe
-        if (!name) {
-            return;
-        }
-
-        let thisArg: any = component.viewModel;
-
-        // If VM is a state, get the current state value.
-        if (observableStateCheck<any>(thisArg)) {
-            thisArg = thisArg.value;
-        }
-
-        if (name.startsWith('this.')) {
-            thisArg = component;
-            name = name.slice(5);
-            if (!(name in component)) {
-                // tslint:disable-next-line:no-console
-                console.warn(`this.${name} does not exist on view.`);
-                return;
-            }
-            source = (component as Record<string, any>)[name];
-
-        } else if (name.startsWith('^') && e_(component.loopParent).viewModel && typeof e_(component.loopParent).viewModel === 'object') {
-            // Note: Not doing a '^' by itself because that's a pretty BS case. If this is the loop child, the parent is probably
-            // an object or an iterable, not really something you'll read or write to directly.
-            // Might do a shortcut to the parent component's 'this'
-
-            thisArg = component.loopParent!.viewModel;
-
-            if (!(name.slice(1) in thisArg)) {
-                // tslint:disable-next-line:no-console
-                console.warn(`${name} does not exist on viewModel parent view model.`);
-                return {};
-            }
-            source = thisArg[name.slice(1)];
-
-        } else if (name === '.') {
-            source = thisArg;
-
-        } else if (typeof thisArg === 'object') {
-            if (!(name in thisArg)) {
-                // tslint:disable-next-line:no-console
-                console.warn(`this.${name} does not exist on viewModel.`);
-                return {};
-            }
-            source = thisArg[name];
-
-        }
-
-        // CONSIDER: Consider adding custom attributes to allow executing method with string parameters. i5_param01="val 1", i5_param02="val 2"
-        if (typeof source === 'function') {
-            return source.call(thisArg);
-        } else if (observablePropertyCheck<FormFieldValue>(source)) {
-            return source.value;
-        } else {
-            return source;
-        }
-    }
-
-    private _configureComponentBindings() {
+    // TODO: Remove loopParent. Use eval-based logic to refer to parent data
+    // TODO: Remove the whole loop + inject concept
+    // TODO: Remove TParent
+    private _configureComponentBindings(loopItemClass?: Constructable<BoundComponent>, loopPostProcess?: (row: any, addedContent: Node[], allRows: Iterable<any>, previousContent: DocumentFragment) => void) {
         const currentAttributes = Array.from(this.content.attributes)
             .filter(f => f.name.startsWith(':') || f.name.startsWith('i5_'))
             .filter(f => f.value || f.name === ':input' || f.name === 'i5_input')
@@ -513,7 +373,8 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
                 ClassValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, this._cssClasses) ||
                 StyleValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, () => this._cssStyle, (val: StyleValue) => this._cssStyle = val) ||
                 ConditionalDisplayValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, () => this._conditionalDisplay, (val: ConditionalDisplayValue) => this._conditionalDisplay = val) ||
-                FormInputValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, () => this._formInputValue, (val: FormInputValue) => this._formInputValue = val);
+                FormInputValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, () => this._formInputValue, (val: FormInputValue) => this._formInputValue = val) ||
+                LoopValue.add(this, this.content, this.viewModel, prop.name, prop.value, loopItemClass, otherComponentId, () => this._loop, (val: LoopValue) => this._loop = val, loopPostProcess);
 
             // TODO: Remove "this." bindings
             deferIfNeeded.call(this);
@@ -523,12 +384,16 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
                 continue;
             }
 
-            const type = this._parseAttributeName(prop.name);
+            if (prop.name.startsWith(':')) {
+                // General ichigo shortcut
+                prop.name = 'i5_' + prop.name.slice(1);
+            }
+            const type = prop.name.slice(3);
             // Regular attributes will all match this.
             if (!type) {
                 continue;
             }
-            switch (type.type) {
+            switch (type) {
                 case "text":
                     if (textHtmlSet) { throw new Error("Can't set i5_text and i5_html at same time"); }
                     textHtmlSet = true;
@@ -541,53 +406,12 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
                     this.content.innerHTML = `<i-v noescape>${prop.value}</i-v>`; // Use this as the template
                     deferIfNeeded.call(this);
                     break;
-                case "loop":
-                    // Grab the base content for the loop, pulling it out of the DOM.
-                    this.setLoop(prop.value, extractNodeContent(this.content), type.detail === 'null', false, otherComponentId);
-                    deferIfNeeded.call(this);
-                    break;
-                case "item":
-                    // Only used as a selector. Has no functionality
-                    break;
-                default:
-                    throw new Error("Not Implemented Ichigo attribute: " + type.type);
             }
 
             function deferIfNeeded(this: BoundComponent) {
                 this._defer = this._defer || prop.value.startsWith('this.');
             }
         }
-    }
-
-    private _parseAttributeName(name: string): { type: string, detail?: string } | undefined {
-        if (name.startsWith(':')) {
-            // General ichigo shortcut
-            name = 'i5_' + name.slice(1);
-        }
-        if (name === 'i5_item') {
-            // This is used to indicate an item component, nothing else.
-            return;
-        } else if (name === 'i5_source') {
-            // TODO: Remove this
-            // This is used to indicate a source component. It's read separately.
-            return;
-        }
-        else if (name === 'i5_event') {
-            // This is used only in Component.addInlineEventListeners().
-            return;
-        } else if (!name.startsWith('i5_')) {
-            return;
-        }
-
-        if (name.startsWith('i5_loop')) {
-            if (name === 'i5_loop:null') {
-                return { type: 'loop', detail: 'null' };
-            }
-            return { type: 'loop' };
-
-        }
-
-        return { type: name.slice(3) };
     }
 }
 

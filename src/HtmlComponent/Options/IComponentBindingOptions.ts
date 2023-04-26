@@ -10,6 +10,7 @@ export interface IComponentBindingOptions<TModel = any, TItem extends BoundCompo
     async?: boolean; // Execute render asynchronously. There will be a brief FOUC (flash of unprocessed content)
     defer?: boolean; // Do not execute render during construction. There will be a very brief FOUC
     loopItemClass?: Constructable<TItem>;
+    loopPostProcess?: (row: any, addedContent: Node[], allRows: Iterable<any>, previousContent: DocumentFragment) => void;
     doNotSubscribe?: boolean;
 }
 
