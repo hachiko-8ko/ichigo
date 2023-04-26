@@ -1,14 +1,21 @@
+import { elementType } from '../../Html/ElementType';
+import { createElement } from '../../Html/CreateElement';
 import { BoundComponent } from '../BoundComponent';
 import { BaseValue } from './BaseValue';
 
 export class ReplacementValue extends BaseValue {
-    static add(component: BoundComponent, clone: DocumentFragment, viewModel: any, current: ReplacementValue[], id?: string): void {
+    static addHtmlTemplate(component: BoundComponent, content: HTMLElement, viewModel: any, current: ReplacementValue[], id?: string): void {
+        try {
+            if (!window.customElements.get('i-v')) {
+                window.customElements.define('i-v', TemplateReplacementValue);
+            }
+        } catch (err) {
+            // customElements isn't officially part of an ES version yet so won't work even in some recent-ish browsers
+        }
 
-        // Working on a clone here, so we don't see the body being built step by step in the browser.
-        for (const repl of clone.querySelectorAll('i-v')) {
+        for (const repl of content.querySelectorAll('i-v')) {
 
-            // Allow 3 ways to reference a component, either by #id (for people who like quickness), by component (for people who like
-            // compliance), or by data-component (for people who REALLY like compliance)
+            // TODO: Remove related components. The replacement tags will exist ONLY under the component they relate to. No nesting.
             let relatedComponentId = '';
             // tslint:disable-next-line:prefer-for-of
             for (let i = 0; i < repl.attributes.length; i++) {
@@ -32,7 +39,10 @@ export class ReplacementValue extends BaseValue {
             }
 
             const noescape = repl.hasAttribute('noescape') && repl.getAttribute('noescape') !== 'false';
+
+            // TODO: Remove this
             const otherComponentId = repl.getAttribute('i5_source') || repl.getAttribute('source') || (repl as HTMLElement).dataset.i5_source || (repl as HTMLElement).dataset.source || repl.getAttribute(':source');
+
             current.push(new ReplacementValue({ component, viewModel, element: repl as HTMLElement, source: repl.innerHTML, noescape, otherComponentId }));
         }
     }
@@ -56,5 +66,14 @@ export class ReplacementValue extends BaseValue {
             this._currentContent = newValue; // save a copy
             this.content.innerHTML = newValue;
         }
+    }
+}
+
+// Use a custom element to create a replacement tag that is not limited, as span is, to containing no block elements.
+// No logic, no special display details.
+// tslint:disable-next-line:max-classes-per-file
+export class TemplateReplacementValue extends HTMLElement {
+    constructor() {
+        super();
     }
 }

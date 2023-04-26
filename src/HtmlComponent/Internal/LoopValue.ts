@@ -102,7 +102,7 @@ export class LoopValue extends BaseValue {
         (this._loopItemClass as typeof BoundComponent).injectBind(row, nodes, {
             replace: false,
             loopParent: this,
-            async: (this._temporaryComponent as any)._async
+            asyncStartup: (this._temporaryComponent as any)._asyncStartup
         } as IComponentBindingOptions & ILoopParent<any>);
     }
 }

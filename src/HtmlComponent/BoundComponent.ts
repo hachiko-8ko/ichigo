@@ -1,19 +1,10 @@
-import { createElement, createFragment } from '../Html/CreateElement';
-import { elementType } from '../Html/ElementType';
-import { escapeHtml } from '../Html/EscapeHtml';
-import { extractNodeContent } from '../Html/ExtractNodeContent';
-import { FormFieldValue, getFormFieldValue } from '../Html/FormFieldValue';
-import { nodeListSelector, nodeListSelectorAll } from '../Html/QuerySelectorNodeList';
 import { observableCheck } from '../Observable/IObservable';
-import { observablePropertyCheck } from '../Observable/ObservableProperty';
-import { observableStateCheck } from '../Observable/ObservableState';
 import { EventHub } from '../System/EventHandler/EventHub';
-import { Constructable, constructorTypeGuard } from '../System/Types/Constructable';
+import { Constructable } from '../System/Types/Constructable';
 import { Kwarg } from '../System/Types/KeywordArguments';
-import { isNone, None } from '../System/Types/NoneType';
 import { e_ } from '../System/Utility/Elvis';
 import { Component } from './Component';
-import { ComponentMap, getComponent } from './ComponentMap';
+import { ComponentMap } from './ComponentMap';
 import { IView } from './Contract/IView';
 import { AttributeValue } from './Internal/AttributeValue';
 import { ClassValue } from './Internal/ClassValue';
@@ -114,7 +105,6 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
     // TODO: Remove this and the TParent type. Use eval-based logic to refer to parent data
     loopParent?: TParent; // only sent when this is a component child creted by loopPostProcess
 
-    private _id?: string;
     private _attributeBindings: AttributeValue[] = [];
     private _cssClasses: ClassValue[] = [];
     private _cssStyle?: StyleValue;
@@ -123,8 +113,11 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
     private _loop?: LoopValue;
     private _replacements: ReplacementValue[] = [];
 
-    private _async = false;
+    // TODO: Remove _id, which is used only for related component
+    private _id?: string;
+    private _asyncStartup = false;
     private _defer = false;
+    private _templateSet = false;
     private _initialized = false;
 
     /**
@@ -147,34 +140,28 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
 
         this.viewModel = viewModel;
 
-        try {
-            if (!window.customElements.get('i-v')) {
-                window.customElements.define('i-v', TemplateReplacementValue);
-            }
-        } catch (err) {
-            // customElements isn't officially part of an ES version yet so won't work even in some recent-ish browsers
-        }
-
         const options = args || {} as IComponentBindingOptions;
 
-        this._async = options.async || false;
+        this._asyncStartup = options.asyncStartup || false;
         this._defer = options.defer || false;
         this._id = this.content.id;
 
         // TODO: Remove this. Use eval-based logic to refer to parent data
         this.loopParent = options.loopParent; // undefined in most cases
 
+        // TODO: Remove this
         if (options.loopPostProcess) {
             options.loopPostProcess = options.loopPostProcess.bind(this);
         }
-        this._configureComponentBindings(options.loopItemClass, options.loopPostProcess);
 
-        this.setTemplate(this.content.innerHTML); // InnerHTML is currently only parsed and then the original text is thrown away.
+        this._configure(options.loopItemClass, options.loopPostProcess);
 
         if (!options.doNotSubscribe) {
             this.observe(this.viewModel, true);
         }
-        if (this._async) {
+
+        // Do the first rendering
+        if (this._asyncStartup) {
             setTimeout(() => this.render(), 0);
         } else {
             this.render();
@@ -216,7 +203,8 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         }
         this.observe(model, useCurrentChannel);
         for (const m of Object.getOwnPropertyNames(model)) {
-            this.observe(model[m], useCurrentChannel);
+            // Only use the model's channel. The current channel is redundant (already would have been used)
+            this.observe(model[m], false);
         }
 
         return this;
@@ -264,65 +252,6 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         return this;
     }
 
-    setTemplate(templateText: string, update: boolean = false): this {
-        if (!templateText) {
-            return this;
-        }
-
-        // This method is executed in the constructor. The update param should not be set.
-        if (update && !this._initialized) {
-            throw new Error('Update should not be true when called internally.');
-        }
-
-        // Since we're creating an element that's not on the page, we probably could avoid using a fragment,
-        // but this is what fragments are for.
-        const template = createElement(elementType.HTMLTemplateElement);
-        template.innerHTML = templateText;
-        const clone = document.importNode(template.content, true);
-
-        // If this is used to replace the existing template, we need to wipe out the previous values
-        this._replacements.length = 0;
-
-        ReplacementValue.add(this, clone, this.viewModel, this._replacements, this._id);
-
-        // In the original build of the object, if any replacements start with "this." we need to defer.
-        // TODO: This probably needs to be expanded to eval() based sources too
-        if (!this._initialized && !this._defer) {
-            this._defer = this._defer || !!this._replacements.find(f => f.source.startsWith('this.'));
-        }
-
-        // See if we need to defer rendering until after initialization.
-        // Note that this will lead to a FOUC, maybe milliseconds, maybe longer.
-        if (!this._defer || this._initialized) {
-            // Replace the completed values before adding to the visible page. This is slightly redundant, because this happens in the render()
-            // step, but I hate it when I see a flash of unreplaced content on sites.
-            // The reason this works is because _replacements references clone, which isn't visible until almost the last line.
-            for (const repl of this._replacements) {
-                repl.render();
-            }
-        }
-
-        // Populate the front-end text. Only do this if there is at least one thing to replace. Otherwise, you're just wiping out perfectly
-        // valid HTML5 references for no reason.
-        if (this._replacements.length) {
-            this.content.innerHTML = '';
-            this.content.appendChild(clone);
-        }
-
-        // Do a full update if requested to
-        if (update) { this.render(); }
-
-        return this;
-    }
-
-    setHtmlTemplate(templateProperty: string = '.', update: boolean = false): this {
-        return this.setTemplate('<i-v noescape>' + templateProperty + '</i-v>', update);
-    }
-
-    setTextTemplate(templateProperty: string = '.', update: boolean = false): this {
-        return this.setTemplate('<i-v>' + templateProperty + '</i-v>', update);
-    }
-
     /**
      * Override this method to unbind a view from an observable.
      */
@@ -335,7 +264,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
     // TODO: Remove loopParent. Use eval-based logic to refer to parent data
     // TODO: Remove the whole loop + inject concept
     // TODO: Remove TParent
-    private _configureComponentBindings(loopItemClass?: Constructable<BoundComponent>, loopPostProcess?: (row: any, addedContent: Node[], allRows: Iterable<any>, previousContent: DocumentFragment) => void) {
+    private _configure(loopItemClass?: Constructable<BoundComponent>, loopPostProcess?: (row: any, addedContent: Node[], allRows: Iterable<any>, previousContent: DocumentFragment) => void) {
         const currentAttributes = Array.from(this.content.attributes)
             .filter(f => f.name.startsWith(':') || f.name.startsWith('i5_'))
             .filter(f => f.value || f.name === ':input' || f.name === 'i5_input')
@@ -367,59 +296,58 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         // Get the alternate source Id
         const otherComponentId: string = e_(currentAttributes.find(f => f.name === 'i5_source' || f.name === ':source')).value;
 
-        let textHtmlSet = false;
         for (const prop of currentAttributes) {
-            const result = AttributeValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, this._attributeBindings) ||
+            // As soon as one of these returns true, it short-circuits
+            const _ = AttributeValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, this._attributeBindings) ||
                 ClassValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, this._cssClasses) ||
                 StyleValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, () => this._cssStyle, (val: StyleValue) => this._cssStyle = val) ||
                 ConditionalDisplayValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, () => this._conditionalDisplay, (val: ConditionalDisplayValue) => this._conditionalDisplay = val) ||
                 FormInputValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, () => this._formInputValue, (val: FormInputValue) => this._formInputValue = val) ||
                 LoopValue.add(this, this.content, this.viewModel, prop.name, prop.value, loopItemClass, otherComponentId, () => this._loop, (val: LoopValue) => this._loop = val, loopPostProcess);
 
-            // TODO: Remove "this." bindings
-            deferIfNeeded.call(this);
-
-            // TODO: for now, continue with legacy additions until all logic moved to objects
-            if (result) {
-                continue;
-            }
-
             if (prop.name.startsWith(':')) {
-                // General ichigo shortcut
                 prop.name = 'i5_' + prop.name.slice(1);
             }
-            const type = prop.name.slice(3);
-            // Regular attributes will all match this.
-            if (!type) {
-                continue;
-            }
-            switch (type) {
-                case "text":
-                    if (textHtmlSet) { throw new Error("Can't set i5_text and i5_html at same time"); }
-                    textHtmlSet = true;
-                    this.content.innerHTML = `<i-v>${prop.value}</i-v>`; // Use this as the template
-                    deferIfNeeded.call(this);
-                    break;
-                case "html":
-                    if (textHtmlSet) { throw new Error("Can't set i5_text and i5_html at same time"); }
-                    textHtmlSet = true;
-                    this.content.innerHTML = `<i-v noescape>${prop.value}</i-v>`; // Use this as the template
-                    deferIfNeeded.call(this);
-                    break;
+
+            if (prop.name === 'i5_text') {
+                this._setTemplate(`<i-v>${prop.value}</i-v>`);
+            } else if (prop.name === 'i5_html') {
+                this._setTemplate(`<i-v noescape>${prop.value}</i-v>`);
             }
 
-            function deferIfNeeded(this: BoundComponent) {
-                this._defer = this._defer || prop.value.startsWith('this.');
+            // TODO: Remove "this." bindings
+            this._defer = this._defer || prop.value.startsWith('this.');
+        }
+
+        this._setTemplate();
+    }
+
+    private _setTemplate(overrideContent?: string): void {
+        if (this._templateSet) {
+            return;
+        }
+
+        this._templateSet = true;
+        if (overrideContent) {
+            this.content.innerHTML = overrideContent;
+        }
+        ReplacementValue.addHtmlTemplate(this, this.content, this.viewModel, this._replacements, this._id);
+
+        // In the original build of the object, if any replacements start with "this." we need to defer.
+        // TODO: This probably needs to be expanded to eval() based sources too
+        if (!this._initialized && !this._defer) {
+            this._defer = this._defer || !!this._replacements.find(f => f.source.startsWith('this.'));
+        }
+
+        // See if we need to defer rendering until after initialization.
+        // Note that this will lead to a FOUC, maybe milliseconds, maybe longer.
+        if (!this._defer || this._initialized) {
+            // Replace the completed values before adding to the visible page. This is slightly redundant, because this happens in the render()
+            // step, but I hate it when I see a flash of unreplaced content on sites.
+            // It's my hope that because of change tracking, this doesn't perform too badly.
+            for (const repl of this._replacements) {
+                repl.render();
             }
         }
-    }
-}
-
-// Use a custom element to create a replacement tag that is not limited, as span is, to containing no block elements.
-// No logic, no special display details.
-// tslint:disable-next-line:max-classes-per-file
-export class TemplateReplacementValue extends HTMLElement {
-    constructor() {
-        super();
     }
 }

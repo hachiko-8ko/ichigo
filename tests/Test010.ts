@@ -537,7 +537,7 @@ export class Test010 extends TestCaseView {
             const comp23b = new LoopComponent2(['One', 'Two', 'Three'], new OuterHtmlBindingOptions({
                 outerHtml: `<div id="comp23b" i5_loop="."><span><i-v>.</i-v> </span></div>`,
                 loopItemClass: LoopComponent3,
-                async: false // Not using async render because it makes testing suck (this is default)
+                asyncStartup: false // Not using async render because it makes testing suck (this is default)
             })).appendToParent(this.testArea);
             assert(comp23b.content.querySelector<HTMLElement>('span:nth-child(2)')!.dataset.id === '1', 'Successfully call constructor of derived class');
 
@@ -590,7 +590,7 @@ export class Test010 extends TestCaseView {
             const comp25b = new LoopComponent2(['One', 'Two', 'Three'], new OuterHtmlBindingOptions({
                 outerHtml: `<div id="comp25b" i5_loop="."><span i5_attr:data-id="this.index"><i-v>this.index</i-v>: <i-v>.</i-v> </span></div>`,
                 loopItemClass: LoopComponent4,
-                async: true
+                asyncStartup: true
             })).appendToParent(this.testArea);
             // This is why I hate testing with async. Throw a debugger in and this will fail:
             this.log('Async test initated for 25b.');
@@ -813,7 +813,7 @@ export class Test010 extends TestCaseView {
             const null2 = new LoopComponent2(undefined as any, {
                 outerHtml: `<div id="null2" i5_loop="."><span><i-v>.</i-v> </span></div>`,
                 loopItemClass: LoopComponent3,
-                async: false // Not using async render because it makes testing suck (this is default)
+                asyncStartup: false // Not using async render because it makes testing suck (this is default)
             }).appendToParent(this.testArea);
             const null3 = new BoundComponent(undefined, {
                 innerHtml: 'Null-hello <i-v>name</i-v>'
