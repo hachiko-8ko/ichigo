@@ -267,11 +267,11 @@ export class Test010 extends TestCaseView {
             // If i5_if is switched off and then on, the original value of display is restored.
             // This is needed because, aside from using classes (which are probably a MUCH better solution),
             // there is no simple 'not-display-none' style, but instead a host of values for the display property.
-            // We haven't tested observables yet so this test will toggle manually.
-            const comp17c = new BoundComponent<HTMLInputElement, typeof basicViewModel>(basicViewModel, '<input id="comp17c" i5_style="block" value="Hello World"/>').appendToParent(this.testArea);
-            comp17c.setVisibility('trumpiness');
-            comp17c.setVisibility('truthiness');
-            assert(comp17c.style.display === 'block', 'i5_if is true, element display property is restored');
+            const observable = ObservableProxy.proximate(basicViewModel);
+            const comp17c = new BoundComponent<HTMLInputElement, typeof basicViewModel>(observable, '<input id="comp17c" i5_style="block" i5_if="truthiness" value="Hello World"/>').appendToParent(this.testArea);
+            observable.truthiness = false;
+            observable.truthiness = true;
+            asyncAsserts.then(() => assert(comp17c.style.display === 'block', 'i5_if is true, element display property is restored'));
 
             // The most common piece of event-based functionality is writing to a variable. In most cases, this
             // triggers an input event. According to the HTML5 specification, the input event is triggered

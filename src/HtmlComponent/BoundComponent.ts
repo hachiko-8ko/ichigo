@@ -17,6 +17,7 @@ import { ComponentMap, getComponent } from './ComponentMap';
 import { IView } from './Contract/IView';
 import { AttributeValue } from './Internal/AttributeValue';
 import { ClassValue } from './Internal/ClassValue';
+import { ConditionalDisplayValue } from './Internal/ConditionalDisplayValue';
 import { FormInputValue } from './Internal/FormInputValue';
 import { ReplacementValue } from './Internal/ReplacementValue';
 import { IComponentBindingOptions } from './Options/IComponentBindingOptions';
@@ -119,9 +120,8 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
     private _attributeBindings: AttributeValue[] = [];
     private _cssClasses: ClassValue[] = [];
     private _cssStyle?: { style: string, otherComponentId?: string };
-    private _cssDisplay?: { source: string, negative: boolean, otherComponentId?: string };
+    private _conditionalDisplay?: ConditionalDisplayValue;
     private _formInputValue?: FormInputValue;
-    private _previousCssDisplaySetting?: string;
     private _loop?: { source: string, postProcess: boolean, fragment: DocumentFragment, otherComponentId?: string };
     private _loopItemClass: Constructable<BoundComponent>;
     private _replacements: ReplacementValue[] = [];
@@ -283,20 +283,8 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
             }
         }
 
-        if (this._cssDisplay) {
-            // If falsy, set display: none (saving previous value). If truthy, restore previous value (if block, flex, but not if none)
-            let val = this._getUntypedValue(this._cssDisplay.source, this._cssDisplay.otherComponentId);
-            if (this._cssDisplay.negative) {
-                val = !val;
-            }
-            if (val) {
-                this.content.style.setProperty('display', this._previousCssDisplaySetting || '');
-            } else {
-                if (this.content.style.display !== 'none') {
-                    this._previousCssDisplaySetting = this.content.style.display || undefined;
-                }
-                this.content.style.setProperty('display', 'none');
-            }
+        if (this._conditionalDisplay) {
+            this._conditionalDisplay.render();
         }
 
         this._updateHtmlReplacements();
@@ -374,16 +362,6 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
 
     removeLoop(update: boolean = false): this {
         this._loop = undefined;
-        if (update) { this.render(); }
-        return this;
-    }
-
-    setVisibility(source: string | undefined = '.', negative: boolean = false, update: boolean = false, otherComponentId?: string): this {
-        if (!source) {
-            this._cssDisplay = undefined;
-        } else {
-            this._cssDisplay = { source, negative, otherComponentId };
-        }
         if (update) { this.render(); }
         return this;
     }
@@ -584,6 +562,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         for (const prop of currentAttributes) {
             const result = AttributeValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, this._attributeBindings) ||
                 ClassValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, this._cssClasses) ||
+                ConditionalDisplayValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, () => this._conditionalDisplay, (val: ConditionalDisplayValue) => this._conditionalDisplay = val) ||
                 FormInputValue.add(this, this.content, this.viewModel, prop.name, prop.value, otherComponentId, () => this._formInputValue, (val: FormInputValue) => this._formInputValue = val);
 
             // TODO: Remove "this." bindings
@@ -595,7 +574,6 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
             }
 
             const type = this._parseAttributeName(prop.name);
-            let negative = false;
             // Regular attributes will all match this.
             if (!type) {
                 continue;
@@ -611,13 +589,6 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
                     if (textHtmlSet) { throw new Error("Can't set i5_text and i5_html at same time"); }
                     textHtmlSet = true;
                     this.content.innerHTML = `<i-v noescape>${prop.value}</i-v>`; // Use this as the template
-                    deferIfNeeded.call(this);
-                    break;
-                case "ifNegative":
-                    negative = true;
-                // fall through
-                case "if":
-                    this.setVisibility(prop.value, negative, false, otherComponentId);
                     deferIfNeeded.call(this);
                     break;
                 case "style":
@@ -662,14 +633,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
             return;
         }
 
-        if (name.startsWith('i5_if')) {
-            let negative = false;
-            if (name.slice(-1) === '-' || name.slice(-1) === '0') {
-                negative = true;
-            }
-            return { type: negative ? 'ifNegative' : 'if' };
-
-        } else if (name.startsWith('i5_loop')) {
+        if (name.startsWith('i5_loop')) {
             if (name === 'i5_loop:null') {
                 return { type: 'loop', detail: 'null' };
             }
