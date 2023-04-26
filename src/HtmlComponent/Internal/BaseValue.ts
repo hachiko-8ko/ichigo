@@ -7,8 +7,9 @@ import { e_ } from '../../System/Utility/Elvis';
 import { BoundComponent } from '../BoundComponent';
 import { getComponent } from '../ComponentMap';
 import { IView } from '../Contract/IView';
+import { IRenderable } from './IRenderable';
 
-export abstract class BaseValue implements IView<HTMLElement, any> {
+export abstract class BaseValue implements IView<HTMLElement, any>, IRenderable {
     // TODO: Remove loopParent
     // Until I have removed the "this" source, we need a reference to the component itself
     // Until I have eliminated the parent (^) source, we need a reference to the loop parent
@@ -20,6 +21,8 @@ export abstract class BaseValue implements IView<HTMLElement, any> {
     constructor(protected _temporaryComponent: BoundComponent, public viewModel: any, public content: HTMLElement, public source: string) {
 
     }
+
+    abstract render(): void;
 
     protected _getStringValue(name: string, skipEscape: boolean = false, sourceComponentId?: string): string | None {
         const value = this._getUntypedValue(name, sourceComponentId);
