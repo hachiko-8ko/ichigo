@@ -443,19 +443,19 @@ export class Test010 extends TestCaseView {
             // item-level, using a string viewModel (not validated by TypeScript).
             const comp22 = new BoundComponent<HTMLDivElement, string[]>(['One', 'Two', 'Three'], `<div id="comp22" i5_loop="."><span><i-v>.</i-v> </span></div>`
             ).appendToParent(this.testArea);
-            assert(comp22.innerHTML === '<i5-loop-row><span iv_bound_component=\"\"><i-v>One</i-v> </span></i5-loop-row><i5-loop-row><span iv_bound_component=\"\"><i-v>Two</i-v> </span></i5-loop-row><i5-loop-row><span iv_bound_component=\"\"><i-v>Three</i-v> </span></i5-loop-row>', 'BoundComponent template processed each line individually');
+            assert(comp22.innerHTML === '<span iv_bound_component=\"\"><i-v>One</i-v> </span><span iv_bound_component=\"\"><i-v>Two</i-v> </span><span iv_bound_component=\"\"><i-v>Three</i-v> </span>', 'BoundComponent template processed each line individually');
 
             // Now test the ^ (parent) data source.
             const comp22a = new BoundComponent<HTMLDivElement, { parentProperty: string, iter: string[] }>({ parentProperty: 'out of Three', iter: ['One', 'Two', 'Three'] }, `<div id="comp22a" i5_loop="iter"><span><i-v>.</i-v> <i-v>^parentProperty</i-v> </span></div>`
             ).appendToParent(this.testArea);
 
-            assert(comp22a.innerHTML === '<i5-loop-row><span iv_bound_component=\"\"><i-v>One</i-v> <i-v>out of Three</i-v> </span></i5-loop-row><i5-loop-row><span iv_bound_component=\"\"><i-v>Two</i-v> <i-v>out of Three</i-v> </span></i5-loop-row><i5-loop-row><span iv_bound_component=\"\"><i-v>Three</i-v> <i-v>out of Three</i-v> </span></i5-loop-row>', 'BoundComponent loop contains reference to parent viewModel when referenced by ^');
+            assert(comp22a.innerHTML === '<span iv_bound_component=\"\"><i-v>One</i-v> <i-v>out of Three</i-v> </span><span iv_bound_component=\"\"><i-v>Two</i-v> <i-v>out of Three</i-v> </span><span iv_bound_component=\"\"><i-v>Three</i-v> <i-v>out of Three</i-v> </span>', 'BoundComponent loop contains reference to parent viewModel when referenced by ^');
 
             // The i-v :source property lets you grab data from any boundComponent on the page, referenced by id
             const comp22b1 = new BoundComponent<HTMLSpanElement, string>("out of Three", { id: "comp22b1", type: "span" }).appendToParent(this.testArea);
             const comp22b = new BoundComponent<HTMLDivElement, string[]>(['One', 'Two', 'Three'], `<div id="comp22b" i5_loop="."><span><i-v>.</i-v> <i-v :source="comp22b1">.</i-v> </span></div>`
             ).appendToParent(this.testArea);
-            assert(comp22b.innerHTML === '<i5-loop-row><span iv_bound_component=\"\"><i-v>One</i-v> <i-v :source=\"comp22b1\">out of Three</i-v> </span></i5-loop-row><i5-loop-row><span iv_bound_component=\"\"><i-v>Two</i-v> <i-v :source=\"comp22b1\">out of Three</i-v> </span></i5-loop-row><i5-loop-row><span iv_bound_component=\"\"><i-v>Three</i-v> <i-v :source=\"comp22b1\">out of Three</i-v> </span></i5-loop-row>', 'Data fetched from other component when referenced by :source');
+            assert(comp22b.innerHTML === '<span iv_bound_component=\"\"><i-v>One</i-v> <i-v :source=\"comp22b1\">out of Three</i-v> </span><span iv_bound_component=\"\"><i-v>Two</i-v> <i-v :source=\"comp22b1\">out of Three</i-v> </span><span iv_bound_component=\"\"><i-v>Three</i-v> <i-v :source=\"comp22b1\">out of Three</i-v> </span>', 'Data fetched from other component when referenced by :source');
 
             // The :source property also works for other custom attributes that are used to render the data (all but write targets)
             const comp22c = new BoundComponent<HTMLSpanElement, { passFail: string, falsy: boolean, style: string }>({ passFail: "PASSED", falsy: false, style: "text-decoration:underline;" }, { id: "comp22c", type: "span" }).appendToParent(this.testArea);
@@ -539,7 +539,7 @@ export class Test010 extends TestCaseView {
                 loopItemClass: LoopComponent3,
                 asyncStartup: false // Not using async render because it makes testing suck (this is default)
             })).appendToParent(this.testArea);
-            assert(comp23b.content.querySelector<HTMLElement>('i5-loop-row:nth-child(2) > span')!.dataset.id === '1', 'Successfully call constructor of derived class');
+            assert(comp23b.content.querySelector<HTMLElement>('span:nth-child(2)')!.dataset.id === '1', 'Successfully call constructor of derived class');
 
             loopcounter23b = 0;
             const comp23c = new LoopComponent2(['One', 'Two', 'Three'], new OuterHtmlBindingOptions({
@@ -556,7 +556,7 @@ export class Test010 extends TestCaseView {
                 outerHtml: `<div id="comp24" i5_loop:null="."><span><i-v>.</i-v> </span></div>`,
                 loopItemClass: LoopComponent3
             })).appendToParent(this.testArea);
-            assert(comp24.innerHTML === '<i5-loop-row><span><i-v>.</i-v> </span></i5-loop-row><i5-loop-row><span><i-v>.</i-v> </span></i5-loop-row><i5-loop-row><span><i-v>.</i-v> </span></i5-loop-row>', 'Null loop handler does not inject any component');
+            assert(comp24.innerHTML === '<span><i-v>.</i-v> </span><span><i-v>.</i-v> </span><span><i-v>.</i-v> </span>', 'Null loop handler does not inject any component');
 
             // At this time, I decided to add a way to access properties of the view, rather than the viewModel, by
             // prefixing them with "this." This would need to be in a derived class, because none of the methods
@@ -584,7 +584,7 @@ export class Test010 extends TestCaseView {
                 outerHtml: `<div id="comp25a" i5_loop="."><span i5_attr:data-id="this.index"><i-v>.</i-v> </span></div>`,
                 loopItemClass: LoopComponent4
             })).appendToParent(this.testArea);
-            assert(comp25a.innerHTML === '<i5-loop-row><span i5_attr:data-id=\"this.index\" iv_loop_component4=\"\"><i-v>.</i-v> </span></i5-loop-row><i5-loop-row><span i5_attr:data-id=\"this.index\" iv_loop_component4=\"\"><i-v>.</i-v> </span></i5-loop-row><i5-loop-row><span i5_attr:data-id=\"this.index\" iv_loop_component4=\"\"><i-v>.</i-v> </span></i5-loop-row>', 'Render() not called automatically when "this." used.');
+            assert(comp25a.innerHTML === '<span i5_attr:data-id=\"this.index\" iv_loop_component4=\"\"><i-v>.</i-v> </span><span i5_attr:data-id=\"this.index\" iv_loop_component4=\"\"><i-v>.</i-v> </span><span i5_attr:data-id=\"this.index\" iv_loop_component4=\"\"><i-v>.</i-v> </span>', 'Render() not called automatically when "this." used.');
 
             // You can use fields without difficulty if async is true
             const comp25b = new LoopComponent2(['One', 'Two', 'Three'], new OuterHtmlBindingOptions({
@@ -594,7 +594,7 @@ export class Test010 extends TestCaseView {
             })).appendToParent(this.testArea);
             // This is why I hate testing with async. Throw a debugger in and this will fail:
             this.log('Async test initated for 25b.');
-            asyncAsserts.then(() => assert((document.querySelector('#comp25b i5-loop-row:nth-child(2) span') as HTMLElement).dataset.id === '1', 'this.index can be accessed asynchronously'));
+            asyncAsserts.then(() => assert((document.querySelector('#comp25b span:nth-child(2)') as HTMLElement).dataset.id === '1', 'this.index can be accessed asynchronously'));
 
             // If you want to do a synchronous call, do it this way.
             class LoopComponent5 extends LoopComponent4 {
@@ -609,7 +609,7 @@ export class Test010 extends TestCaseView {
                 outerHtml: `<div id="comp25c" i5_loop="."><span i5_attr:data-id="this.index"><i-v>this.index</i-v>: <i-v>.</i-v> </span></div>`,
                 loopItemClass: LoopComponent5
             })).appendToParent(this.testArea);
-            assert((document.querySelector('#comp25c i5-loop-row:nth-child(2) span') as HTMLElement).dataset.id === '1', 'this.index can be accessed if render() called in constructor');
+            assert((document.querySelector('#comp25c span:nth-child(2)') as HTMLElement).dataset.id === '1', 'this.index can be accessed if render() called in constructor');
 
             // I warned you against having replacement values that return other components, because the process of refreshing the data
             // (if an observable is in play) will delete your references. And the timing can be tricky.
@@ -818,6 +818,24 @@ export class Test010 extends TestCaseView {
             const null3 = new BoundComponent(undefined, {
                 innerHtml: 'Null-hello <i-v>name</i-v>'
             }).appendToParent(this.testArea);
+
+            // If you declare the loop in the format :loop:someUniqueProperty (not including null), then simple change detection is applied.
+            // In the default case, during a change, the entire list is destroyed and re-filled. With change detection on, items may be
+            // moved, inserted, or deleted. It just requires the iterable to return objects having a unique id to identify the current rows.
+            // In some cases (adding a row to a very big list), this might perform better.
+            // I'm not 100% sure it's needed. Even my computer is fast enough that I can't see the difference.
+            const observableArr2 = ObservableProxy.proximate([{ id: 1, val: 'One' }, { id: 2, val: 'Two' }]);
+            const observeComp7a = new BoundComponent(observableArr2,
+                {
+                    outerHtml: `<div :loop:id="."><span class="observing"><i-v>val</i-v> </span></div>`
+                }
+            ).appendToParent(this.testArea);
+            assert(Array.from(observeComp7a.content.querySelectorAll('.observing')).length === 2, 'Array length before updating (change detection on).');
+            const firstItem = observeComp7a.content.querySelector('.observing');
+            observableArr2.push({ id: 3, val: 'Three' });
+            asyncAsserts.then(() => assert(Array.from(observeComp7a.content.querySelectorAll('.observing')).length === 3, 'Array length after updating (change detection on).'))
+                .then(() => assert(Array.from(observeComp7a.content.querySelectorAll('.observing i-v')).pop()!.innerHTML === 'Three', 'Last item is the most recent array addition (change detection on)'))
+                .then(() => assert(observeComp7a.content.querySelector('.observing') === firstItem, 'First item has not been destroyed because it did not change (change detection on)'));
 
             this.log(`TEST ${this.viewModel.testNumber}: Sync test successful`);
 

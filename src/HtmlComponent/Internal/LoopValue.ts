@@ -171,14 +171,24 @@ export class LoopValue extends BaseValue {
         const clone = document.importNode(this._loopHtml, true);
         // As soon as we add the clone to content, childNodes loses reference to its child nodes, so copy it.
         const nodes = Array.from(clone.childNodes).slice();
-        // Wrap all loop rows in a i5-loop-row element, which has no built-in logic or blocking behavior, but allows us
-        // to track the row.
+
+        // Wrap all loop rows in a i5-loop-row element, which allows us to track the row.
+        // If there is exactly 1 child node, this will be discarded shortly. We can track the single child element.
+        // But if it is made up of several elements, or is a text node, this forces a single element per row.
         const newRow = document.createElement('i5-loop-row');
         newRow.appendChild(clone);
+
         if (this._postProcess) {
             this._loopPostProcess(row, nodes, allRows, previousContent);
         }
-        return newRow;
+        if (newRow.childNodes.length !== 1) {
+            return newRow;
+        }
+        // This is a textnode or empty
+        if (!newRow.firstElementChild) {
+            return newRow;
+        }
+        return newRow.firstElementChild as HTMLElement;
     }
 
     // TODO: Delete this whole thing
