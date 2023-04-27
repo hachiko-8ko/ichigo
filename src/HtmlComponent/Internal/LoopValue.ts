@@ -8,6 +8,14 @@ import { extractNodeContent } from "../../Html/ExtractNodeContent";
 export class LoopValue extends BaseValue {
 
     static add(component: BoundComponent, content: HTMLElement, viewModel: any, attr: string, attrValue: string, loopItemClass: Constructable<BoundComponent> | undefined, otherComponentId: string | undefined, getterCallback: () => LoopValue | undefined, setterCallback: (val: LoopValue) => void, postProcessFunction?: (row: any, addedContent: Node[], allRows: Iterable<any>, previousContent: DocumentFragment) => void): boolean {
+        try {
+            if (!window.customElements.get('i5-loop-row')) {
+                window.customElements.define('i5-loop-row', LoopRow);
+            }
+        } catch (err) {
+            // customElements isn't officially part of an ES version yet so won't work even in some recent-ish browsers
+        }
+
         const config = parseAttributeName(attr);
         if (!config) { // Not an loop binding
             return false;
@@ -20,24 +28,33 @@ export class LoopValue extends BaseValue {
             return true; // stop processing
         }
 
-        current = new LoopValue({ component, content, viewModel, source: attrValue, otherComponentId, loopItemClass, skipPostProcess: config.skipPostProcess, postProcessFunction });
+        current = new LoopValue({ component, content, viewModel, source: attrValue, uniqueId: config.uniqueId, otherComponentId, loopItemClass, skipPostProcess: config.skipPostProcess, postProcessFunction });
         setterCallback(current);
         return true;
     }
 
+    static findLoopContainers(content: HTMLElement): NodeList {
+        return content.querySelectorAll('[i5_item], [\\00003Aitem], [data-i5_item]');
+    }
+
+    private _loopHtml: DocumentFragment;
+
+    private _currentLoop: Map<any, { element: HTMLElement, currentIndex: number }> = new Map();
+    private _uniqueId?: string;
+
+    // TODO: Remove these 2 properties
     private _loopItemClass: Constructable<BoundComponent>;
     private _postProcess: boolean;
-    private _loopHtml: DocumentFragment;
-    // TODO: Remove this
     private _postProcessFunction?: (row: any, addedContent: Node[], allRows: Iterable<any>, previousContent: DocumentFragment) => void;
 
     // TODO: Remove otherComponentId
     private _otherComponentId?: string;
 
     // TODO: Remove the whole loop + inject concept + skip post process
-    constructor({ component, content, viewModel, source, skipPostProcess, loopItemClass, postProcessFunction, otherComponentId }: { component: BoundComponent, content: HTMLElement, viewModel: any, source?: string, skipPostProcess?: boolean, loopItemClass?: Constructable<BoundComponent>, postProcessFunction?: (row: any, addedContent: Node[], allRows: Iterable<any>, previousContent: DocumentFragment) => void, otherComponentId?: string }) {
+    constructor({ component, content, viewModel, source, skipPostProcess, loopItemClass, postProcessFunction, uniqueId, otherComponentId }: { component: BoundComponent, content: HTMLElement, viewModel: any, source?: string, uniqueId?: string, skipPostProcess?: boolean, loopItemClass?: Constructable<BoundComponent>, postProcessFunction?: (row: any, addedContent: Node[], allRows: Iterable<any>, previousContent: DocumentFragment) => void, otherComponentId?: string }) {
         super(component, viewModel, content, source || '');
         this._loopHtml = extractNodeContent(this.content);
+        this._uniqueId = uniqueId;
         if (loopItemClass) {
             if (!constructorTypeGuard(loopItemClass)) {
                 throw new Error('loopItemClass is not a constructor');
@@ -56,18 +73,112 @@ export class LoopValue extends BaseValue {
 
     render(): void {
         const iterable = this._getUntypedValue(this.source, this._otherComponentId);
-        if (iterable && typeof iterable[Symbol.iterator] === 'function') {
-            const previousContent = extractNodeContent(this.content);
-            for (const row of iterable) {
-                const clone = document.importNode(this._loopHtml, true);
-                // As soon as we add the clone to content, childNodes loses reference to its child nodes, so copy it.
-                const nodes = Array.from(clone.childNodes).slice();
-                this.content.appendChild(clone);
-                if (this._postProcess) {
-                    this._loopPostProcess(row, nodes, iterable, previousContent);
+        if (!iterable || typeof iterable[Symbol.iterator] !== 'function') {
+            return;
+        }
+        if (this._uniqueId) {
+            this._replaceSome(iterable);
+        } else {
+            this._replaceAll(iterable);
+        }
+    }
+
+    /**
+     * If there are a lot of changes (e.g. reversing a list), this would peform much better than going one by one.
+     * This also doesn't depend on every item being unique.
+     * @param iterable
+     * @param previousContent
+     */
+    private _replaceAll(iterable: IterableIterator<any>): void {
+        const previousContent = extractNodeContent(this.content);
+        this._currentLoop.clear();
+        let i = 0;
+        for (const row of iterable) {
+            const newRow = this._createNewItem(row, iterable, previousContent);
+            this.content.appendChild(newRow);
+            this._currentLoop.set(row, { element: newRow, currentIndex: i });
+            i++;
+        }
+    }
+
+    /**
+     * If there are a small number of changes (e.g. adding an item to the end), this would perform better than replacing
+     * the full list. But it depends on every item being unique. Because the iterable might not be (could be a list of strings),
+     * we have to impose a restriction. Some languages, like vue, handle this is by requiring an unique id property (or else the
+     * library developer is not responsible for issues). I like that. It's faster than checking the data for uniqueness (doesn't 
+     * take long for small lists, but...).
+     * @param iterable
+     * @param previousContent
+     */
+    private _replaceSome(iterable: IterableIterator<any>): void {
+        if (!this._uniqueId) {
+            throw new Error("Programming error: Called replaceSome without id defined");
+        }
+
+        const temp = new Map(this._currentLoop); // temp holding place
+        this._currentLoop.clear();
+
+        let i = 0;
+        let offset = 0;
+        let previous: HTMLElement | undefined;
+        for (const row of iterable) {
+            const key = row[this._uniqueId];
+            if (key === undefined) {
+                throw new Error("Unique Id not found in iterable object");
+            }
+            let current = temp.get(key);
+            if (current) {
+                // Move it from temp to current
+                temp.delete(key);
+                this._currentLoop.set(key, current);
+
+                // The item exists. But it might or might not be in the right position.
+                if (i !== current.currentIndex + offset) {
+                    appendAfter(this.content, current.element, previous);
+                    offset++;
                 }
+                current.currentIndex = i;
+            } else {
+                const newRow = this._createNewItem(row, iterable, document.createDocumentFragment());
+                current = { element: newRow, currentIndex: i };
+                appendAfter(this.content, current.element, previous);
+                this._currentLoop.set(key, current);
+                offset++;
+            }
+            previous = current.element;
+            i++;
+        }
+
+        // anything still in temp wasn't in the source iterable
+        for (const dead of temp) {
+            remove(this.content, dead[1].element);
+        }
+
+        function appendAfter(content: Node, next: Node, prev?: Node): void {
+            if (prev) {
+                content.insertBefore(next, prev.nextSibling);
+            } else {
+                content.insertBefore(next, content.firstChild);
             }
         }
+
+        function remove(content: Node, item: Node): void {
+            content.removeChild(item);
+        }
+    }
+
+    private _createNewItem(row: any, allRows: Iterable<any>, previousContent: DocumentFragment): HTMLElement {
+        const clone = document.importNode(this._loopHtml, true);
+        // As soon as we add the clone to content, childNodes loses reference to its child nodes, so copy it.
+        const nodes = Array.from(clone.childNodes).slice();
+        // Wrap all loop rows in a i5-loop-row element, which has no built-in logic or blocking behavior, but allows us
+        // to track the row.
+        const newRow = document.createElement('i5-loop-row');
+        newRow.appendChild(clone);
+        if (this._postProcess) {
+            this._loopPostProcess(row, nodes, allRows, previousContent);
+        }
+        return newRow;
     }
 
     // TODO: Delete this whole thing
@@ -112,7 +223,14 @@ export interface ILoopParent<TParent extends BoundComponent<HTMLElement, any> = 
     loopParent?: TParent;
 }
 
-function parseAttributeName(attributeName: string): { skipPostProcess: boolean } | undefined {
+// tslint:disable-next-line:max-classes-per-file
+export class LoopRow extends HTMLElement {
+    constructor() {
+        super();
+    }
+}
+
+function parseAttributeName(attributeName: string): { skipPostProcess: boolean, uniqueId?: string } | undefined {
     if (!attributeName) {
         return;
     }
@@ -123,5 +241,7 @@ function parseAttributeName(attributeName: string): { skipPostProcess: boolean }
         return { skipPostProcess: false };
     } else if (attributeName === 'i5_loop:null' || attributeName === 'i5_loop_null') {
         return { skipPostProcess: true };
+    } else if (attributeName.startsWith('i5_loop:') || attributeName.startsWith('i5_loop_')) {
+        return { skipPostProcess: false, uniqueId: attributeName.slice(8) };
     }
 }

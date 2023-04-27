@@ -130,7 +130,13 @@ convert the existing HTML into a component object, not to set the HTML itself (f
 
 WARN: When the loop is rendered, the previous contents are discarded. This means that if you have references to the old item, it's gone. If you want to do something about that, write your own callback, pulling the old items out of previousContent.
 
-* i5_loop:null="propertyName" or i5_loop_null="propertyName"  
+* i5_loop:uniqueId="propertyName" or i5_loop_uniqueid="propertyName"
+Loop but use change detection based on the "uniqueId" property of the iterable element object. If this isn't there or is invalid, you'll get an error.
+
+When change-detection is used, the previous contents are not discarded (unless removed). And adding to the end of a BIG list should be faster. But some operations,
+like reversing or shuffling a big list, will take longer, because every item is individually moved to its final location.
+
+* i5_loop:null="propertyName" or i5_loop_null="propertyName"
 Loop but do not call loopPostProcess() upon completion.
 
 * i5_item  
