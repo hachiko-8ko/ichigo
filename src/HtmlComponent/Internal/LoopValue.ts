@@ -34,7 +34,7 @@ export class LoopValue extends BaseValue {
     }
 
     static findLoopContainers(content: HTMLElement): NodeList {
-        return content.querySelectorAll('[i5_item], [\\00003Aitem], [data-i5_item]');
+        return content.querySelectorAll('[i5_loop], [\\00003Aloop], [data-i5_loop]');
     }
 
     private _loopHtml: DocumentFragment;
