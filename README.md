@@ -67,13 +67,9 @@ See the demo page at https://hachiko-8ko.github.io/ichigo-demo for examples and 
 
 I'm planning on making some breaking changes, hopefully not too much. These are the issues I'm working out in my head:
 
-* Adding sub-components so that sub-elements' HTML properties (e.g. class, style) can be manipulated without making a new component. This one is pretty simple and shouldn't break anything.
-
 * Reorganizing the API to make it difficult to nest components. I can't actually make it impossible, but I can discourage it in code, not just in notes that say "please don't do this," which is what I have right now.
 
 * Eliminating the optional property in i-v tags that allows replacements from one of many nested parents.
-
-* Finding a way to handle the one place where nesting is still critical, loops, without the loop html being captured by the parent component. I don't want to force all loops to be defined in separate 'files' like components. But this means handling loops different to the way everything else is handled, which I don't like.
 
 * Removing the loop parent 'selector', which I never liked, and replacing i5_source with something more flexible.
 

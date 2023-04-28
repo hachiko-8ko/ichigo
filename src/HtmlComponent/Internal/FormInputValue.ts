@@ -171,9 +171,6 @@ function parseAttributeName(attributeName: string): { value?: boolean, input?: b
     if (!attributeName) {
         return;
     }
-    if (attributeName.startsWith(':')) {
-        attributeName = 'i5_' + attributeName.slice(1);
-    }
     if (attributeName === 'i5_value') {
         return { value: true };
     } else if (attributeName === 'i5_input') {

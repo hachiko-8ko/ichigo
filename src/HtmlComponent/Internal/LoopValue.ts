@@ -7,7 +7,7 @@ import { extractNodeContent } from "../../Html/ExtractNodeContent";
 
 export class LoopValue extends BaseValue {
 
-    static add(component: BoundComponent, content: HTMLElement, viewModel: any, attr: string, attrValue: string, loopItemClass: Constructable<BoundComponent> | undefined, otherComponentId: string | undefined, getterCallback: () => LoopValue | undefined, setterCallback: (val: LoopValue) => void, postProcessFunction?: (row: any, addedContent: Node[], allRows: Iterable<any>, previousContent: DocumentFragment) => void): boolean {
+    static add(component: BoundComponent, content: HTMLElement, viewModel: any, attr: string, attrValue: string, loopItemClass: Constructable<BoundComponent> | undefined, otherComponentId: string | undefined, getterCallback: () => LoopValue | undefined, setterCallback: (val: LoopValue) => void, postProcessFunction?: (row: any, addedContent: HTMLElement, allRows: Iterable<any>, previousContent: DocumentFragment) => void): boolean {
         try {
             if (!window.customElements.get('i5-loop-row')) {
                 window.customElements.define('i5-loop-row', LoopRow);
@@ -45,13 +45,13 @@ export class LoopValue extends BaseValue {
     // TODO: Remove these 2 properties
     private _loopItemClass: Constructable<BoundComponent>;
     private _postProcess: boolean;
-    private _postProcessFunction?: (row: any, addedContent: Node[], allRows: Iterable<any>, previousContent: DocumentFragment) => void;
+    private _postProcessFunction?: (row: any, addedContent: HTMLElement, allRows: Iterable<any>, previousContent: DocumentFragment) => void;
 
     // TODO: Remove otherComponentId
     private _otherComponentId?: string;
 
     // TODO: Remove the whole loop + inject concept + skip post process
-    constructor({ component, content, viewModel, source, skipPostProcess, loopItemClass, postProcessFunction, uniqueId, otherComponentId }: { component: BoundComponent, content: HTMLElement, viewModel: any, source?: string, uniqueId?: string, skipPostProcess?: boolean, loopItemClass?: Constructable<BoundComponent>, postProcessFunction?: (row: any, addedContent: Node[], allRows: Iterable<any>, previousContent: DocumentFragment) => void, otherComponentId?: string }) {
+    constructor({ component, content, viewModel, source, skipPostProcess, loopItemClass, postProcessFunction, uniqueId, otherComponentId }: { component: BoundComponent, content: HTMLElement, viewModel: any, source?: string, uniqueId?: string, skipPostProcess?: boolean, loopItemClass?: Constructable<BoundComponent>, postProcessFunction?: (row: any, addedContent: HTMLElement, allRows: Iterable<any>, previousContent: DocumentFragment) => void, otherComponentId?: string }) {
         super(component, viewModel, content, source || '');
         this._loopHtml = extractNodeContent(this.content);
         this._uniqueId = uniqueId;
@@ -169,8 +169,6 @@ export class LoopValue extends BaseValue {
 
     private _createNewItem(row: any, allRows: Iterable<any>, previousContent: DocumentFragment): HTMLElement {
         const clone = document.importNode(this._loopHtml, true);
-        // As soon as we add the clone to content, childNodes loses reference to its child nodes, so copy it.
-        const nodes = Array.from(clone.childNodes).slice();
 
         // Wrap all loop rows in a i5-loop-row element, which allows us to track the row.
         // If there is exactly 1 child node, this will be discarded shortly. We can track the single child element.
@@ -179,7 +177,7 @@ export class LoopValue extends BaseValue {
         newRow.appendChild(clone);
 
         if (this._postProcess) {
-            this._loopPostProcess(row, nodes, allRows, previousContent);
+            this._loopPostProcess(row, newRow, allRows, previousContent);
         }
         if (newRow.childNodes.length !== 1) {
             return newRow;
@@ -192,25 +190,36 @@ export class LoopValue extends BaseValue {
     }
 
     // TODO: Delete this whole thing
-    private _loopPostProcess(row: any, addedContent: Node[], allRows: Iterable<any>, previousContent: DocumentFragment): void {
+    private _loopPostProcess(row: any, addedContent: HTMLElement, allRows: Iterable<any>, previousContent: DocumentFragment): void {
         // This is only temporary until the post-process concept is deleted
         if (this._postProcessFunction) {
             this._postProcessFunction(row, addedContent, allRows, previousContent);
             return;
         }
 
-        if (!addedContent.length) {
+        if (!addedContent || !addedContent.childNodes || !addedContent.childNodes.length) {
             return;
         }
 
+        // TODO: There's no need for i5_item without post processing
         // If the typescript part of the following were important, this would be a problem
         // if this were a derived class.
         const thisclass = this;
-        const nodes = nodeListSelectorAll(addedContent, '[i5_item], [\\00003Aitem], [data-i5_item]');
+        const nodes: Node[] = [];
+
+        const loopNodes = LoopValue.findLoopContainers(addedContent);
+        for (const node of addedContent.querySelectorAll('[i5_item], [\\00003Aitem], [data-i5_item]')) {
+            // If contained inside a loop node, then don't add it
+            for (const loopElement of loopNodes) {
+                if (!loopElement.contains(node)) {
+                    nodes.push(node);
+                }
+            }
+        }
 
         // If no i5_item matches, then grab the first element.
         if (!nodes.length) {
-            const firstNode = nodeListSelector(addedContent, '*');
+            const firstNode = addedContent.querySelector('*');
             if (firstNode) {
                 nodes.push(firstNode);
             }
@@ -220,11 +229,13 @@ export class LoopValue extends BaseValue {
             return;
         }
 
-        (this._loopItemClass as typeof BoundComponent).injectBind(row, nodes, {
-            replace: false,
-            loopParent: this,
-            asyncStartup: (this._temporaryComponent as any)._asyncStartup
-        } as IComponentBindingOptions & ILoopParent<any>);
+        for (const node of nodes) {
+            (this._loopItemClass as typeof BoundComponent).injectBind(row, node as HTMLElement, {
+                replace: false,
+                loopParent: this,
+                asyncStartup: (this._temporaryComponent as any)._asyncStartup
+            } as IComponentBindingOptions & ILoopParent<any>);
+        }
     }
 }
 
@@ -243,9 +254,6 @@ export class LoopRow extends HTMLElement {
 function parseAttributeName(attributeName: string): { skipPostProcess: boolean, uniqueId?: string } | undefined {
     if (!attributeName) {
         return;
-    }
-    if (attributeName.startsWith(':')) {
-        attributeName = 'i5_' + attributeName.slice(1);
     }
     if (attributeName === 'i5_loop') {
         return { skipPostProcess: false };

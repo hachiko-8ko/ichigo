@@ -18,7 +18,6 @@ export class ReplacementValue extends BaseValue {
         const loopNodes = LoopValue.findLoopContainers(content);
 
         ivloop: for (const repl of content.querySelectorAll('i-v')) {
-
             // If contained inside a loop node, then don't add it. Go to the next i-v element
             for (const loopElement of loopNodes) {
                 if (loopElement.contains(repl)) {

@@ -37,6 +37,9 @@ export class StyleValue extends BaseValue {
     }
 
     render(): void {
+        // TODO: individual style adders. :style:styleName="styleValue"
+        // when value is falsy, call element.style.removeProperty(styleName)
+
         const newValue = this._getStringValue(this.source, false, this._otherComponentId) || '';
         // change detection depends on no outside processes updating the DOM
         if (newValue !== this._currentStyle) {
@@ -54,10 +57,6 @@ function parseAttributeName(attributeName: string): boolean {
     if (!attributeName) {
         return false;
     }
-    if (attributeName.startsWith(':')) {
-        attributeName = 'i5_' + attributeName.slice(1);
-    }
-
     if (attributeName !== 'i5_style') {
         return false;
     }

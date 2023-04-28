@@ -78,9 +78,6 @@ function parseAttributeName(attributeName: string): { attribute: string, bool?: 
     if (!attributeName) {
         return;
     }
-    if (attributeName.startsWith(':')) {
-        attributeName = 'i5_' + attributeName.slice(1);
-    }
 
     if (attributeName.startsWith('i5_attr')) {
         if (attributeName[7] !== ':' && attributeName[7] !== '_') {

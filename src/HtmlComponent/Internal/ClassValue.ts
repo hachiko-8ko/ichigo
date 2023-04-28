@@ -86,9 +86,6 @@ function parseAttributeName(attributeName: string): { baseClass?: boolean, class
     if (!attributeName) {
         return;
     }
-    if (attributeName.startsWith(':')) {
-        attributeName = 'i5_' + attributeName.slice(1);
-    }
     if (!attributeName.startsWith('i5_class')) {
         return;
     }

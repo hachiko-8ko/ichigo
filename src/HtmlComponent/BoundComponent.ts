@@ -1,3 +1,4 @@
+import { ITreeNode } from './Internal/ITreeNode';
 import { observableCheck } from '../Observable/IObservable';
 import { EventHub } from '../System/EventHandler/EventHub';
 import { Constructable } from '../System/Types/Constructable';
@@ -11,6 +12,8 @@ import { IExistingElementOptions } from './Options/IExistingElementOptions';
 import { IExistingLookupOptions } from './Options/IExistingLookupOptions';
 import { IInnerHtmlOptions } from './Options/IInnerHtmlOptions';
 import { IOuterHtmlOptions } from './Options/IOuterHtmlOptions';
+import { LoopValue } from './Internal/LoopValue';
+import { getCustomAttributes } from './Internal/GetCustomAttributes';
 
 export type BoundInjectOptions<TModel = any, TItem extends BoundComponent<HTMLElement, any> = BoundComponent<HTMLElement, any>> = IComponentBindingOptions<TModel, TItem> &
     (
@@ -98,7 +101,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
     // TODO: Remove this and the TParent type. Use eval-based logic to refer to parent data
     loopParent?: TParent; // only sent when this is a component child creted by loopPostProcess
 
-    private _renderers: RenderContainer[] = [];
+    private _renderer!: RenderContainer;
     // TODO: Remove _id, which is used only for related component
     private _id?: string;
     private _asyncStartup = false;
@@ -209,9 +212,7 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
             return this;
         }
 
-        for (const renderer of this._renderers) {
-            renderer.render();
-        }
+        this._renderer.render();
 
         return this;
     }
@@ -228,11 +229,36 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
     // TODO: Remove loopParent. Use eval-based logic to refer to parent data
     // TODO: Remove the whole loop + inject concept
     // TODO: Remove TParent
-    private _configure(loopItemClass?: Constructable<BoundComponent>, loopPostProcess?: (row: any, addedContent: Node[], allRows: Iterable<any>, previousContent: DocumentFragment) => void) {
-        // Add a root level renderer for the top-level properties and the replacement values.
-        this._renderers.push(new RenderContainer(this, this.viewModel, this.content, this._id, loopItemClass, loopPostProcess, true));
+    private _configure(loopItemClass?: Constructable<BoundComponent>, loopPostProcess?: (row: any, addedContent: HTMLElement, allRows: Iterable<any>, previousContent: DocumentFragment) => void) {
+        // We need to build a tree of renderers, to handle loop elements where the i-v tags need to be tracked with the loop they are inside.
+        // It also will help us in passing the parent scope to children, in the case of (gak) nested loops.
 
-        // Now we can add renderers for any element within the component where binding properties exist.
-        // Child-level renderers do not track replacements (because that would be redundant)
+        // The method being used to build the tree here is probably not ideal for performance (one DOM query per renderers), as opposed to
+        // iterating the DOM recursively once from top to bottom, but this shouldn't hit the recursion limit (no recursion is happening).
+        // The limit keeps increasing so probably not but it's hassle I just don't want to deal with. Premature optimization and all.
+        // That said, this would be much easier if CSS had an attribute name-starts-with selector instead of value-starts-with.
+
+        const renderTree: ITreeNode[] = Array.from(this.content.querySelectorAll('*'))
+            .map(e => ({ element: e as HTMLElement, children: [] }))
+            .filter(e => !!getCustomAttributes(e.element).find(f => f.name.startsWith(':') || f.name.startsWith('i5_')));
+
+        // Tag the items with an i5 attribute, which then can be done to search the DOM for parents beginning with i5_ or :
+        for (const treeItem of renderTree) {
+            treeItem.element.setAttribute('i5', '');
+        }
+        for (const treeItem of renderTree) {
+            try {
+                const myParent = treeItem.element.parentElement!.closest('[i5]');
+                const parentTree = renderTree.find(f => f.element === myParent);
+                if (parentTree) {
+                    treeItem.parent = parentTree;
+                    parentTree.children.push(treeItem);
+                }
+            } catch {
+                // when element has no parent (should never happen)
+            }
+        }
+
+        this._renderer = new RenderContainer(this, this.viewModel, this.content, renderTree.filter(f => !f.parent), this._id, loopItemClass, loopPostProcess, true);
     }
 }

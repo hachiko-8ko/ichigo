@@ -11,13 +11,17 @@ import { LoopValue } from './LoopValue';
 import { ReplacementValue } from './ReplacementValue';
 import { StyleValue } from './StyleValue';
 import { IRenderable } from './IRenderable';
+import { ITreeNode } from './ITreeNode';
+import { getCustomAttributes } from './GetCustomAttributes';
 
 /**
  * This class contains everything that can be rendered on a page, tied to a specific content element per container.
  * This allows multiple containers on a page tied to the same component and view model.
  */
 export class RenderContainer implements IView<HTMLElement, any> {
-    private _rootRenderer: boolean;
+
+    private _mainRenderer: boolean;
+    private _childRenderers: RenderContainer[] = [];
     private _attributeBindings: AttributeValue[] = [];
     private _cssClasses: ClassValue[] = [];
     private _cssStyle?: StyleValue;
@@ -38,56 +42,51 @@ export class RenderContainer implements IView<HTMLElement, any> {
     }
 
     // TODO: Remove _temporaryComponent
-    constructor(private _temporaryComponent: BoundComponent, public viewModel: any, public content: HTMLElement, id?: string, loopItemClass?: Constructable<BoundComponent>, loopPostProcess?: (row: any, addedContent: Node[], allRows: Iterable<any>, previousContent: DocumentFragment) => void, rootRenderer: boolean = false) {
-        this._rootRenderer = rootRenderer;
+    constructor(private _temporaryComponent: BoundComponent, public viewModel: any, public content: HTMLElement, childRenderers: ITreeNode[], id?: string, loopItemClass?: Constructable<BoundComponent>, loopPostProcess?: (row: any, addedContent: HTMLElement, allRows: Iterable<any>, previousContent: DocumentFragment) => void, rootRenderer: boolean = false) {
+        this._mainRenderer = rootRenderer;
         if (id) {
             this._temporaryId = id;
         }
+
         this._configure(loopItemClass, loopPostProcess);
+
+        // If this is a loop renderer, we don't process child renderers. The child innerHTML was deleted when the loop was created, and
+        // those tree-nodes are referencing non-existent containers. If there weren't so many redundant places for the loop tag, we could
+        // have skipped adding them
+        if (this._loop) {
+            return;
+        }
+
+        // Create a render container for each of the child renderers, if any
+        for (const top of childRenderers) {
+            this._childRenderers.push(new RenderContainer(this._temporaryComponent, this.viewModel, top.element, top.children, this._temporaryId, loopItemClass, loopPostProcess));
+        }
     }
 
     render(): void {
         for (const item of this._renderers()) {
             item.render();
         }
+        for (const renderer of this._childRenderers) {
+            renderer.render();
+        }
     }
 
     // TODO: Remove loopParent. Use eval-based logic to refer to parent data
     // TODO: Remove the whole loop + inject concept
     // TODO: Remove TParent
-    private _configure(loopItemClass?: Constructable<BoundComponent>, loopPostProcess?: (row: any, addedContent: Node[], allRows: Iterable<any>, previousContent: DocumentFragment) => void) {
-        const currentAttributes = Array.from(this.content.attributes)
-            .filter(f => f.name.startsWith(':') || f.name.startsWith('i5_'))
-            .filter(f => f.value || f.name === ':input' || f.name === 'i5_input')
-            .map(m => ({
-                name: m.name,
-                value: m.value || ''
-            }));
-
-        // It's often easier to add properties than attributes (just because this library is property-centric) but props don't appear
-        // in this.content.attributes.
-        for (const propName of Object.getOwnPropertyNames(this.content).filter(f => f.startsWith(':') || f.startsWith('i5_'))) {
-            const value = (this.content as any)[propName];
-            if (value || propName === ':input' || propName === 'i5_input') {
-                currentAttributes.push({ name: propName, value: value || '' });
-            }
-        }
-
-        // Technically it's invalid to add custom attributes to regular elements, so technically <replace-me :class:redtext="warning">
-        // is legal but if if it were a div, that would be illegal. So we'll allow <div data-i5_class_redtext="warning">.
-        // Note that the weird name handling of data attributes could break your code if you try to use this. You may need to do extra
-        // work to make your code work, all in the name of strict adherence to standards. It's up to you.
-        for (const attr of Object.getOwnPropertyNames(this.content.dataset).filter(f => f.startsWith(':') || f.startsWith('i5_'))) {
-            const value = this.content.dataset[attr];
-            if (value || attr === 'i5_input') {
-                currentAttributes.push({ name: attr, value: value || '' });
-            }
-        }
+    private _configure(loopItemClass?: Constructable<BoundComponent>, loopPostProcess?: (row: any, addedContent: HTMLElement, allRows: Iterable<any>, previousContent: DocumentFragment) => void) {
+        const currentAttributes = getCustomAttributes(this.content)
+            .filter(f => f.value || f.name === ':input' || f.name === 'i5_input');
 
         // Get the alternate source Id
         const otherComponentId: string = e_(currentAttributes.find(f => f.name === 'i5_source' || f.name === ':source')).value;
 
         for (const prop of currentAttributes) {
+            if (prop.name.startsWith(':')) {
+                prop.name = 'i5_' + prop.name.slice(1);
+            }
+
             // As soon as one of these returns true, it short-circuits
             const _ = AttributeValue.add(this._temporaryComponent, this.content, this.viewModel, prop.name, prop.value, otherComponentId, this._attributeBindings) ||
                 ClassValue.add(this._temporaryComponent, this.content, this.viewModel, prop.name, prop.value, otherComponentId, this._cssClasses) ||
@@ -101,13 +100,26 @@ export class RenderContainer implements IView<HTMLElement, any> {
             }
 
             if (prop.name === 'i5_text') {
-                this._setTemplate(`<i-v>${prop.value}</i-v>`);
+                // Only do this if the template hasn't been set already.
+                if (!this._templateSet) {
+                    this._templateSet = true;
+                    this.content.innerHTML = `<i-v>${prop.value}</i-v>`;
+                }
             } else if (prop.name === 'i5_html') {
-                this._setTemplate(`<i-v noescape>${prop.value}</i-v>`);
+                // Only do this if the template hasn't been set already.
+                if (!this._templateSet) {
+                    this._templateSet = true;
+                    this.content.innerHTML = `<i-v noescape>${prop.value}</i-v>`;
+                }
             }
 
             // TODO: Remove "this." bindings
             this._defer = this._defer || prop.value.startsWith('this.');
+        }
+
+        // If there is a loop element on this renderer, this is considered 'main' which means it has i-v tags
+        if (!this._mainRenderer && this._loop) {
+            this._mainRenderer = true;
         }
 
         this._setTemplate();
@@ -118,7 +130,7 @@ export class RenderContainer implements IView<HTMLElement, any> {
         const classBindings = this._cssClasses.filter(f => f.baseClass).concat(this._cssClasses.filter(f => !f.baseClass));
 
         // Only return at the root level. If we returned at every level, they'd be processed over and over.
-        if (this._rootRenderer) {
+        if (this._mainRenderer) {
             yield* this._replacements;
         }
 
@@ -135,17 +147,12 @@ export class RenderContainer implements IView<HTMLElement, any> {
         }
     }
 
-    private _setTemplate(overrideContent?: string): void {
-        // Only do something if this is the root (top-level) renderer, not one of the sub-renderers.
-        // Only do something if the template hasn't been set already.
-        if (!this._rootRenderer || this._templateSet) {
+    private _setTemplate(): void {
+        // Only do something if this is the top-level (root or loop) renderer, not one of the sub-renderers.
+        if (!this._mainRenderer) {
             return;
         }
 
-        this._templateSet = true;
-        if (overrideContent) {
-            this.content.innerHTML = overrideContent;
-        }
         ReplacementValue.addHtmlTemplate(this._temporaryComponent, this.content, this.viewModel, this._replacements, this._temporaryId);
 
         // In the original build of the object, if any replacements start with "this." we need to defer.

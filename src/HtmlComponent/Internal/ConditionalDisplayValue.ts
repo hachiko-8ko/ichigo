@@ -76,10 +76,6 @@ function parseAttributeName(attributeName: string): { negative?: boolean } | und
     if (!attributeName) {
         return;
     }
-    if (attributeName.startsWith(':')) {
-        attributeName = 'i5_' + attributeName.slice(1);
-    }
-
     if (attributeName === 'i5_if') {
         return {};
     }

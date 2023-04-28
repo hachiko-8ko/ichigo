@@ -116,6 +116,9 @@ The same but negated.
 Repeat the contents of the element once for every item in the value of propertyName. Does nothing if the value is not iterable.  
 WARN: String is iterable and passing them is allowed.
 
+WARN: If you want to use table with thead elements, you should use tbody and put the :loop on tbody. Of the two options, putting the binding on the parent
+and repeating everything inside or putting the binding on the row and having a floating ghost parent (like angular's ng-for), I think binding the parent is cleaner for every case except this single table scenario.
+
 After each item is added, the method loopPostProcess() is executed, taking these inputs: 
 > `(row: WhateverTypeIsIterated, addedContent: Node[], allRows: Iterable<WhateverTypeIsIterated>, previousContent: DocumentFragment)`  
 
@@ -128,7 +131,7 @@ To do something different, write a derived class and override loopPostProcess() 
 IMPORTANT: This was just said, but bears repeating: loopPostProcess() is called *after* the looped HTML is inserted. loopPostProcess() should be used to
 convert the existing HTML into a component object, not to set the HTML itself (for example, changing the tag of the i5_item element).
 
-WARN: When the loop is rendered, the previous contents are discarded. This means that if you have references to the old item, it's gone. If you want to do something about that, write your own callback, pulling the old items out of previousContent.
+WARN: In the default setup, without change detection, when the loop is rendered, the previous contents are discarded. This means that if you have references to the old item, it's gone. If you want to do something about that, write your own callback, pulling the old items out of previousContent.
 
 * i5_loop:uniqueId="propertyName" or i5_loop_uniqueid="propertyName"
 Loop but use change detection based on the "uniqueId" property of the iterable element object. If this isn't there or is invalid, you'll get an error.
