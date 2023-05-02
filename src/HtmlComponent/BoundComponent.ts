@@ -14,6 +14,7 @@ import { IInnerHtmlOptions } from './Options/IInnerHtmlOptions';
 import { IOuterHtmlOptions } from './Options/IOuterHtmlOptions';
 import { LoopValue } from './Internal/LoopValue';
 import { getCustomAttributes } from './Internal/GetCustomAttributes';
+import { convertElementToTemplate } from '../Html/ConvertElementToTemplate';
 
 export type BoundInjectOptions<TModel = any, TItem extends BoundComponent<HTMLElement, any> = BoundComponent<HTMLElement, any>> = IComponentBindingOptions<TModel, TItem> &
     (
@@ -230,22 +231,65 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
     // TODO: Remove the whole loop + inject concept
     // TODO: Remove TParent
     private _configure(loopItemClass?: Constructable<BoundComponent>, loopPostProcess?: (row: any, addedContent: HTMLElement, allRows: Iterable<any>, previousContent: DocumentFragment) => void) {
+        const loopRegex = /^(?:i5_|\:)loop[:_]?/;
+
+        const childElements = Array.from(this.content.querySelectorAll('*'))
+            .map(e => ({ element: e as HTMLElement, customAttributes: getCustomAttributes(e as HTMLElement) }))
+            .filter(e => e.customAttributes.find((f: { name: string, value: string }) => f.name.startsWith(':') || f.name.startsWith('i5_')));
+
+        // We will use this attribute for DOM searches. Much easier.
+        const topAttributes = getCustomAttributes(this.content);
+        if (topAttributes.find(f => loopRegex.test(f.name))) {
+            // TODO: The check for i5=loop can be removed once postProcessing is gone.
+            // It's only here because when it's post-processed, changing i5=loop back to i5=loop_convert causes it be converted again.
+            const i5attr = this.content.attributes.getNamedItem('i5');
+            if (!i5attr || i5attr.value !== 'loop') {
+                this.content.setAttribute('i5', 'loop_convert');
+            }
+        } else {
+            this.content.setAttribute('i5', 'component');
+        }
+
+        for (const item of childElements) {
+            if (item.customAttributes.find(f => loopRegex.test(f.name))) {
+                // TODO: The check for i5=loop can be removed once postProcessing is gone.
+                // It's only here because when it's post-processed, changing i5=loop back to i5=loop_convert causes it be converted again.
+                const i5attr = item.element.attributes.getNamedItem('i5');
+                if (!i5attr || i5attr.value !== 'loop') {
+                    item.element.setAttribute('i5', 'loop_convert');
+                }
+            } else {
+                item.element.setAttribute('i5', 'child');
+            }
+        }
+
+        // One thing that will make this quicker is to short-circuit nested loops. We need a way so that when searching for properties, you
+        // don't grab elements that are inside nested loops.
+        // I see three ways to do this:
+        // 1) Check to see if you're inside a loop and if so, stop. This is time-consuming.
+        // 2) Do what Vue does and require loop content to always be inside a template. DOM queries don't go into templates (which do a
+        // bit of extremely simple misdirection to hide their content). This requires the dev to add a new element.
+        // 3) Convert loops to templates. This should be quick, stops querySelectorAll's greedy search, and the dev doesn't do anything.
+        // I like 3.
+        if (this.content.attributes.getNamedItem('i5').value === 'loop_convert') {
+            const loopTemplate = convertElementToTemplate(this.content);
+            convertLoop(loopTemplate!.content);
+        } else {
+            convertLoop(this.content);
+        }
+
+        // Now that all loops have gone from <tag :loop:something="else"><other></other></tag> to
+        // <tag :loop:something="else"><template><other></other></template></tag>,
+        // nothing inside "template" will show up on any DOM queries.
+
         // We need to build a tree of renderers, to handle loop elements where the i-v tags need to be tracked with the loop they are inside.
         // It also will help us in passing the parent scope to children, in the case of (gak) nested loops.
 
         // The method being used to build the tree here is probably not ideal for performance (one DOM query per renderers), as opposed to
         // iterating the DOM recursively once from top to bottom, but this shouldn't hit the recursion limit (no recursion is happening).
-        // The limit keeps increasing so probably not but it's hassle I just don't want to deal with. Premature optimization and all.
-        // That said, this would be much easier if CSS had an attribute name-starts-with selector instead of value-starts-with.
+        const renderTree: ITreeNode[] = Array.from(this.content.querySelectorAll('[i5]'))
+            .map(e => ({ element: e as HTMLElement, children: [] }));
 
-        const renderTree: ITreeNode[] = Array.from(this.content.querySelectorAll('*'))
-            .map(e => ({ element: e as HTMLElement, children: [] }))
-            .filter(e => !!getCustomAttributes(e.element).find(f => f.name.startsWith(':') || f.name.startsWith('i5_')));
-
-        // Tag the items with an i5 attribute, which then can be done to search the DOM for parents beginning with i5_ or :
-        for (const treeItem of renderTree) {
-            treeItem.element.setAttribute('i5', '');
-        }
         for (const treeItem of renderTree) {
             try {
                 const myParent = treeItem.element.parentElement!.closest('[i5]');
@@ -260,5 +304,19 @@ export class BoundComponent<TElement extends HTMLElement = HTMLElement, TModel =
         }
 
         this._renderer = new RenderContainer(this, this.viewModel, this.content, renderTree.filter(f => !f.parent), this._id, loopItemClass, loopPostProcess, true);
+    }
+}
+
+function convertLoop(element: Element | DocumentFragment): void {
+    while (true) {
+        const loop: Element = element.querySelector('[i5=loop_convert]') as Element;
+        if (!loop) {
+            // No more loops
+            return;
+        }
+        const loopTemplate = convertElementToTemplate(loop)!;
+        // Now we need to search for loops nested inside this loop.
+        // Select queries will return null because the content has been moved to .content. So search there.
+        convertLoop(loopTemplate.content);
     }
 }

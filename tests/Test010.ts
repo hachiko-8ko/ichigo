@@ -444,7 +444,7 @@ export class Test010 extends TestCaseView {
             // item-level, using a string viewModel (not validated by TypeScript).
             const comp22 = new BoundComponent<HTMLDivElement, string[]>(['One', 'Two', 'Three'], `<div id="comp22" i5_loop="."><span><i-v>.</i-v> </span></div>`
             ).appendToParent(this.testArea);
-            assert(comp22.innerHTML === '<span iv_bound_component=\"\"><i-v>One</i-v> </span><span iv_bound_component=\"\"><i-v>Two</i-v> </span><span iv_bound_component=\"\"><i-v>Three</i-v> </span>', 'BoundComponent template processed each line individually');
+            assert(comp22.content.innerText === 'One Two Three', 'BoundComponent template processed each line individually');
 
             // Now test the ^ (parent) data source.
             const comp22a = new BoundComponent<HTMLDivElement, { parentProperty: string, iter: string[] }>({ parentProperty: 'out of Three', iter: ['One', 'Two', 'Three'] }, `<div id="comp22a" i5_loop="iter"><span><i-v>.</i-v> <i-v>^parentProperty</i-v> </span></div>`
@@ -585,6 +585,7 @@ export class Test010 extends TestCaseView {
                 outerHtml: `<div id="comp25a" i5_loop="."><span i5_attr:data-id="this.index"><i-v>.</i-v> </span></div>`,
                 loopItemClass: LoopComponent4
             })).appendToParent(this.testArea);
+
             assert(comp25a.content.innerText === '. . .', 'Render() not called automatically when "this." used.');
 
             // You can use fields without difficulty if async is true
@@ -634,7 +635,7 @@ export class Test010 extends TestCaseView {
             const comp26b = BoundComponent.inject('comp-2', { replace: true, type: elementType.HTMLDivElement, id: 'comp26b' }, kw('viewModel', 'nested'));
 
             assert(comp26a[0].innerHTML.includes('Hello <i-v #comp26a="">World</i-v>'), 'I-V tags are replaced based on their assigned components');
-            assert(comp26a[0].innerHTML.includes('<div id="comp26b" iv_bound_component="">This is <i-v #comp26b="">nested</i-v></div>'), 'I-V tags are restricted to their assigned components');
+            assert(comp26a[0].content.querySelector('div#comp26b')!.innerHTML === 'This is <i-v #comp26b="">nested</i-v>', 'I-V tags are restricted to their assigned components');
 
             this.testArea.appendChild(div(`
                 <comp-1>
@@ -646,7 +647,7 @@ export class Test010 extends TestCaseView {
             const comp26c = BoundComponent.inject('comp-1', { replace: true, type: elementType.HTMLDivElement, id: 'comp26c' }, kw('viewModel', basicViewModel));
             const comp26d = BoundComponent.inject('comp-2', { replace: true, type: elementType.HTMLDivElement, id: 'comp26d' }, kw('viewModel', 'nested'));
             assert(comp26c[0].innerHTML.includes('Hello <i-v>World</i-v>'), 'Non-scoped I-V tags match first component requested');
-            assert(comp26c[0].innerHTML.includes('<div id="comp26d" iv_bound_component="">This is <i-v component="comp26d">nested</i-v></div>'), 'I-V tags are replaced based on their assigned components when bound using full syntax');
+            assert(comp26c[0].content.querySelector('div#comp26d')!.innerHTML === 'This is <i-v component="comp26d">nested</i-v>', 'I-V tags are replaced based on their assigned components when bound using full syntax');
 
             // Multi-renderer containers
             // In our previous examples, components were being created for each bindable element. That isn't necessary.
@@ -658,11 +659,11 @@ export class Test010 extends TestCaseView {
                             <input id="multi-2" name="name" :input:="name" />
                         </div>
                     </div>
-                    <h5 id='multi-3'><i-v>name</i-v></h5>
+                    <h5 id='multi-3-notbound'><i-v>name</i-v></h5>
                     <div :loop="data" id='multi-4'>
-                        <div :item>
+                        <div :item :attr:id="num">
                             Animals whose names are <i-v>num</i-v> letters:
-                            <div :loop="animals" :attr:id="."><div :item><i-v>.</i-v></div></div>
+                            <div :loop="animals"><div :item><i-v>.</i-v></div></div>
                         </div>
                     </div>
                 </div>

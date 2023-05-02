@@ -50,13 +50,6 @@ export class RenderContainer implements IView<HTMLElement, any> {
 
         this._configure(loopItemClass, loopPostProcess);
 
-        // If this is a loop renderer, we don't process child renderers. The child innerHTML was deleted when the loop was created, and
-        // those tree-nodes are referencing non-existent containers. If there weren't so many redundant places for the loop tag, we could
-        // have skipped adding them
-        if (this._loop) {
-            return;
-        }
-
         // Create a render container for each of the child renderers, if any
         for (const top of childRenderers) {
             this._childRenderers.push(new RenderContainer(this._temporaryComponent, this.viewModel, top.element, top.children, this._temporaryId, loopItemClass, loopPostProcess));
@@ -95,10 +88,6 @@ export class RenderContainer implements IView<HTMLElement, any> {
                 FormInputValue.add(this._temporaryComponent, this.content, this.viewModel, prop.name, prop.value, otherComponentId, () => this._formInputValue, (val: FormInputValue) => this._formInputValue = val) ||
                 LoopValue.add(this._temporaryComponent, this.content, this.viewModel, prop.name, prop.value, loopItemClass, otherComponentId, () => this._loop, (val: LoopValue) => this._loop = val, loopPostProcess);
 
-            if (prop.name.startsWith(':')) {
-                prop.name = 'i5_' + prop.name.slice(1);
-            }
-
             if (prop.name === 'i5_text') {
                 // Only do this if the template hasn't been set already.
                 if (!this._templateSet) {
@@ -117,11 +106,6 @@ export class RenderContainer implements IView<HTMLElement, any> {
             this._defer = this._defer || prop.value.startsWith('this.');
         }
 
-        // If there is a loop element on this renderer, this is considered 'main' which means it has i-v tags
-        if (!this._mainRenderer && this._loop) {
-            this._mainRenderer = true;
-        }
-
         this._setTemplate();
     }
 
@@ -129,11 +113,7 @@ export class RenderContainer implements IView<HTMLElement, any> {
         // To let className string and boolean switches to play together, set the className first and then modify using switches
         const classBindings = this._cssClasses.filter(f => f.baseClass).concat(this._cssClasses.filter(f => !f.baseClass));
 
-        // Only return at the root level. If we returned at every level, they'd be processed over and over.
-        if (this._mainRenderer) {
-            yield* this._replacements;
-        }
-
+        yield* this._replacements; // should be empty except at the main level
         yield* this._attributeBindings;
         yield* classBindings;
         yield* concatIfExists(this._formInputValue, this._cssStyle, this._conditionalDisplay, this._loop);
@@ -149,7 +129,7 @@ export class RenderContainer implements IView<HTMLElement, any> {
 
     private _setTemplate(): void {
         // Only do something if this is the top-level (root or loop) renderer, not one of the sub-renderers.
-        if (!this._mainRenderer) {
+        if (!this._mainRenderer && !this._loop) {
             return;
         }
 

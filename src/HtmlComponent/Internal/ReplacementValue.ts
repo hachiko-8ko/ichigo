@@ -14,17 +14,7 @@ export class ReplacementValue extends BaseValue {
             // customElements isn't officially part of an ES version yet so won't work even in some recent-ish browsers
         }
 
-        // We don't want to grab any i-v tags that are inside a loop node. This is because they should be associated with the loop.
-        const loopNodes = LoopValue.findLoopContainers(content);
-
-        ivloop: for (const repl of content.querySelectorAll('i-v')) {
-            // If contained inside a loop node, then don't add it. Go to the next i-v element
-            for (const loopElement of loopNodes) {
-                if (loopElement.contains(repl)) {
-                    continue ivloop;
-                }
-            }
-
+        for (const repl of content.querySelectorAll('i-v')) {
             // TODO: Remove related components. The replacement tags will exist ONLY under the component they relate to. No nesting.
             let relatedComponentId = '';
             // tslint:disable-next-line:prefer-for-of

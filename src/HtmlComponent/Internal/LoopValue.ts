@@ -33,10 +33,6 @@ export class LoopValue extends BaseValue {
         return true;
     }
 
-    static findLoopContainers(content: HTMLElement): NodeList {
-        return content.querySelectorAll('[i5_loop], [\\00003Aloop], [data-i5_loop]');
-    }
-
     private _loopHtml: DocumentFragment;
 
     private _currentLoop: Map<any, { element: HTMLElement, currentIndex: number }> = new Map();
@@ -53,7 +49,14 @@ export class LoopValue extends BaseValue {
     // TODO: Remove the whole loop + inject concept + skip post process
     constructor({ component, content, viewModel, source, skipPostProcess, loopItemClass, postProcessFunction, uniqueId, otherComponentId }: { component: BoundComponent, content: HTMLElement, viewModel: any, source?: string, uniqueId?: string, skipPostProcess?: boolean, loopItemClass?: Constructable<BoundComponent>, postProcessFunction?: (row: any, addedContent: HTMLElement, allRows: Iterable<any>, previousContent: DocumentFragment) => void, otherComponentId?: string }) {
         super(component, viewModel, content, source || '');
-        this._loopHtml = extractNodeContent(this.content);
+
+        const template = this.content.querySelector('template[i5loop=content]') as HTMLTemplateElement;
+        if (!template) {
+            throw new Error('Something went wrong. Loop content not converted to template.');
+        }
+        this._loopHtml = template.content;
+        template.parentElement!.removeChild(template);
+
         this._uniqueId = uniqueId;
         if (loopItemClass) {
             if (!constructorTypeGuard(loopItemClass)) {
@@ -175,7 +178,7 @@ export class LoopValue extends BaseValue {
         // But if it is made up of several elements, or is a text node, this forces a single element per row.
         const newRow = document.createElement('i5-loop-row');
         newRow.appendChild(clone);
-
+        
         if (this._postProcess) {
             this._loopPostProcess(row, newRow, allRows, previousContent);
         }
@@ -207,19 +210,13 @@ export class LoopValue extends BaseValue {
         const thisclass = this;
         const nodes: Node[] = [];
 
-        const loopNodes = LoopValue.findLoopContainers(addedContent);
         for (const node of addedContent.querySelectorAll('[i5_item], [\\00003Aitem], [data-i5_item]')) {
-            // If contained inside a loop node, then don't add it
-            for (const loopElement of loopNodes) {
-                if (!loopElement.contains(node)) {
-                    nodes.push(node);
-                }
-            }
+            nodes.push(node);
         }
 
         // If no i5_item matches, then grab the first element.
         if (!nodes.length) {
-            const firstNode = addedContent.querySelector('*');
+            const firstNode = addedContent.firstElementChild;
             if (firstNode) {
                 nodes.push(firstNode);
             }
