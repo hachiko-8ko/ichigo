@@ -19,7 +19,8 @@ export abstract class BaseValue implements IView<HTMLElement, any>, IRenderable 
 
     // TODO: Remove _temporaryComponent
     constructor(protected _temporaryComponent: BoundComponent, public viewModel: any, public content: HTMLElement, public source: string) {
-
+        // TODO: Provide an option to disable change tracking, for components where there are outside DOM updates.
+        // It should be component-wide. No need for overkill.
     }
 
     abstract render(): void;
@@ -28,6 +29,8 @@ export abstract class BaseValue implements IView<HTMLElement, any>, IRenderable 
         const value = this._getUntypedValue(name, sourceComponentId);
         if (isNone(value)) {
             return value;
+        } else if (value === false) {
+            return undefined;
         } else if (typeof value === 'string') {
             return skipEscape ? value : escapeHtml(value);
         } else {

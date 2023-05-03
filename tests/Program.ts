@@ -1,4 +1,4 @@
-import { PageRouter, IRouteGuard, IRoute } from '../src/Api';
+import { PageRouter } from '../src/Api';
 import { TestbenchView } from '../tests/TestbenchView';
 import { Test000 } from './Test000';
 import { Test001 } from './Test001';

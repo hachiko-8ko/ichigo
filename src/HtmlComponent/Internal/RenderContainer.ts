@@ -24,7 +24,7 @@ export class RenderContainer implements IView<HTMLElement, any> {
     private _childRenderers: RenderContainer[] = [];
     private _attributeBindings: AttributeValue[] = [];
     private _cssClasses: ClassValue[] = [];
-    private _cssStyle?: StyleValue;
+    private _cssStyles: StyleValue[] = [];
     private _conditionalDisplay?: ConditionalDisplayValue;
     private _formInputValue?: FormInputValue;
     private _loop?: LoopValue;
@@ -83,7 +83,7 @@ export class RenderContainer implements IView<HTMLElement, any> {
             // As soon as one of these returns true, it short-circuits
             const _ = AttributeValue.add(this._temporaryComponent, this.content, this.viewModel, prop.name, prop.value, otherComponentId, this._attributeBindings) ||
                 ClassValue.add(this._temporaryComponent, this.content, this.viewModel, prop.name, prop.value, otherComponentId, this._cssClasses) ||
-                StyleValue.add(this._temporaryComponent, this.content, this.viewModel, prop.name, prop.value, otherComponentId, () => this._cssStyle, (val: StyleValue) => this._cssStyle = val) ||
+                StyleValue.add(this._temporaryComponent, this.content, this.viewModel, prop.name, prop.value, otherComponentId, this._cssStyles) ||
                 ConditionalDisplayValue.add(this._temporaryComponent, this.content, this.viewModel, prop.name, prop.value, otherComponentId, () => this._conditionalDisplay, (val: ConditionalDisplayValue) => this._conditionalDisplay = val) ||
                 FormInputValue.add(this._temporaryComponent, this.content, this.viewModel, prop.name, prop.value, otherComponentId, () => this._formInputValue, (val: FormInputValue) => this._formInputValue = val) ||
                 LoopValue.add(this._temporaryComponent, this.content, this.viewModel, prop.name, prop.value, loopItemClass, otherComponentId, () => this._loop, (val: LoopValue) => this._loop = val, loopPostProcess);
@@ -112,11 +112,14 @@ export class RenderContainer implements IView<HTMLElement, any> {
     private *_renderers(): IterableIterator<IRenderable> {
         // To let className string and boolean switches to play together, set the className first and then modify using switches
         const classBindings = this._cssClasses.filter(f => f.baseClass).concat(this._cssClasses.filter(f => !f.baseClass));
+        // Similarly for styles
+        const styleBindings = this._cssStyles.filter(f => f.baseStyle).concat(this._cssStyles.filter(f => !f.baseStyle));
 
         yield* this._replacements; // should be empty except at the main level
         yield* this._attributeBindings;
         yield* classBindings;
-        yield* concatIfExists(this._formInputValue, this._cssStyle, this._conditionalDisplay, this._loop);
+        yield* styleBindings;
+        yield* concatIfExists(this._formInputValue, this._conditionalDisplay, this._loop);
 
         function* concatIfExists(...objects: Nullable<IRenderable>[]): IterableIterator<IRenderable> {
             for (const obj of objects) {

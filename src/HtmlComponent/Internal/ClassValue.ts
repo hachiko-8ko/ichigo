@@ -41,6 +41,9 @@ export class ClassValue extends BaseValue {
         super(component, viewModel, content, source);
         this.baseClass = baseClass || false;
         this.className = className;
+        if (!this.baseClass && !this.className) {
+            throw new Error('If switched class binding, class name must be provided');
+        }
 
         this._negative = negative || false;
 
@@ -69,14 +72,14 @@ export class ClassValue extends BaseValue {
         }
         if (val) {
             // change detection depends on no outside processes updating the DOM
-            if (this.className && !this._currentClass) {
+            if (!this._currentClass) {
                 this._currentClass = 'SET'; // save a copy
-                this.content.classList.add(this.className);
+                this.content.classList.add(this.className!);
             }
         } else {
-            if (this.className && this._currentClass) {
+            if (this._currentClass) {
                 this._currentClass = ''; // update the copy
-                this.content.classList.remove(this.className || '');
+                this.content.classList.remove(this.className!);
             }
         }
     }

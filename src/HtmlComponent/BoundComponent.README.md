@@ -95,6 +95,9 @@ Remove the boolean attribute whose name is attribute if the value of propertyNam
 * i5_style="propertyName"  
 Add/set the style string provided by the value of propertyName.
 
+* i5_style:styleName="propertyName"
+Add/set the style to the value provided by the value of propertyName. If the value is falsy, remove it.
+
 * i5_class="propertyName"  
 Set the className string equal to the value of propertyName.
 
