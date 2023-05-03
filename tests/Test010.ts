@@ -59,12 +59,14 @@ class TestViewModel extends TestCaseViewModel {
             <li> i5_bool_attributeName="property" or i5_bool:attributeName="property" or :bool:attributeName="property" - Add boolean attribute attributeName if property is truthy
             <li> i5_bool0_attributeName="property" or i5_bool-:attributeName="property" or :bool-:attributeName="property" - Remove boolean attribute attributeName if property is truthy
             <li> i5_style="property" or :style="property" - Set style string to property
+            <li> i5_style_styleName="property" or i5_style:styleName="property" or :style:styleName="property"- If property is truthy, add styleName with that value. If falsy, remove styleName
             <li> i5_class="property" or :class="property" - Set classList string to property
             <li> i5_class_className="property" or i5_class:className="property" or :class:className="property" - If property is truthy, add className. If falsy, remove className
             <li> i5_class0_className="property" or i5_class-:className="property" or :class-:className="property" - Reverse of previous option
             <li> i5_if="property" or :if="property" - If property is truthy, display:none applied. If falsy, removed (and possibly reset if switched on then off)
             <li> i5_if0="property" or :if-="property" - Reverse of previous option
-            <li> i5_loop="property" or :loop="property" - Repeat element once for each item in property, calling loopPostProcess() after
+            <li> i5_loop="property" or :loop="property" - Repeat element once for each item in property, calling loopPostProcess() after. The list is deleted and recreated after each change.
+            <li> i5_loop_id="property" or i5_loop:id="property" or :loop:id="property" - The same as the default loop, except each item is tracked according to their object property indicated by id. Only the changes required to result in the final list are done.
             <li> i5_loop_null="property" or i5_loop:null="property" or :loop:null="property" - The same, but loopPostProcess() is not called
             <li> i5_item or :item (no value) - Indicate a the item in a loop that should be converted into a component (optional)
             <li> i5_input or :input (no value) - Bind input events on form field to the BoundComponent.write() method
@@ -99,6 +101,7 @@ export class Test010 extends TestCaseView {
                 trumpiness: false,
                 nothing: null,
                 block: "display: block",
+                color: "blue",
                 bold: "font-weight: bold",
                 sampleMethod: function () { return this.name; },
                 sampleMethod2: function () { return this.cssClass; },
@@ -248,6 +251,14 @@ export class Test010 extends TestCaseView {
             const comp15c = new BoundComponent<HTMLInputElement, typeof basicViewModel>(basicViewModel, '<input id="comp15c" i5_value="name" i5_bool-:disabled="nothing" i5_style="block" />').appendToParent(this.testArea);
             assert(comp15c.content.hasAttribute('disabled'), 'Null attr should set negated boolean attribute');
             assert(comp15c.style.display === 'block', 'Style should set style');
+
+            // You can also set styles on a style by style basis. Rather than setting the full style string like i5_style,
+            // i5_style:styleName sets styleName equal to the value provided.
+            const comp15d = new BoundComponent<HTMLInputElement, typeof basicViewModel>(basicViewModel, '<input id="comp15d" i5_style:background-color="color" />').appendToParent(this.testArea);
+            assert(comp15d.style.backgroundColor === 'blue', 'Style switch should set style');
+
+            const comp15e = new BoundComponent<HTMLInputElement, typeof basicViewModel>(basicViewModel, '<input id="comp15e" style="display: block;" i5_style:display="trumpiness" />').appendToParent(this.testArea);
+            assert(!comp15e.style.display, 'Style switch should clear style');
 
             // You can set the classList with i5_class, which we've already seen. If there are multiple classes, include them
             // separated by space, just like you do in HTML. This lets you turn classes on or off.

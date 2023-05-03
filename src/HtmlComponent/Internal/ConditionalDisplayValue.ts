@@ -39,6 +39,9 @@ export class ConditionalDisplayValue extends BaseValue {
     constructor({ component, content, viewModel, source, negative, otherComponentId }: { component: BoundComponent, content: HTMLElement, viewModel: any, source?: string, negative?: boolean, otherComponentId?: string }) {
         super(component, viewModel, content, source || '');
         this._negative = negative || false;
+
+        this._visible = this.content.style.display !== 'none';
+
         if (otherComponentId) {
             this._otherComponentId = otherComponentId;
         }

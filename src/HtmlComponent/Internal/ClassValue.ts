@@ -44,8 +44,13 @@ export class ClassValue extends BaseValue {
         if (!this.baseClass && !this.className) {
             throw new Error('If switched class binding, class name must be provided');
         }
-
         this._negative = negative || false;
+
+        if (this.baseClass) {
+            this._currentClass = this.content.className;
+        } else {
+            this._currentClass = this.content.classList.contains(this.className!) ? 'SET' : '';
+        }
 
         if (otherComponentId) {
             this._otherComponentId = otherComponentId;

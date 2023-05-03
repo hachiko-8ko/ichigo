@@ -34,6 +34,21 @@ export class AttributeValue extends BaseValue {
         this.attribute = attribute;
         this._bool = bool || false;
         this._negative = negative;
+
+        if (this._bool) {
+            try {
+                this._currentValue = this.content.attributes.getNamedItem(this.attribute).value ? 'SET' : '';
+            } catch {
+                this._currentValue = '';
+            }
+        } else {
+            try {
+                this._currentValue = this.content.attributes.getNamedItem(this.attribute).value;
+            } catch {
+                this._currentValue = '';
+            }
+        }
+
         if (otherComponentId) {
             this._otherComponentId = otherComponentId;
         }
