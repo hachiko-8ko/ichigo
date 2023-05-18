@@ -168,13 +168,10 @@ export class ObservableState<T = any> extends ObservableBase<PropertyChangedEven
         }
     }
 
-    subscribe(callback: IAction1<PropertyChangedEventArgs>, thisArg?: any): void;
     subscribe(callback: IAction1<PropertyChangedEventArgs>, thisArg?: any): void {
         return super.subscribe(callback, thisArg);
     }
 
-    unsubscribe(thisArg: any): void;
-    unsubscribe(callback: IAction1<any>, thisArg?: any): void;
     unsubscribe(callback: IAction1<any>, thisArg?: any): void {
         super.unsubscribe(callback, thisArg);
     }

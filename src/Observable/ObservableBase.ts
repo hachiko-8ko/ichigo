@@ -30,15 +30,13 @@ export abstract class ObservableBase<TArgs = any> implements IObservable {
         }
     }
 
-    subscribe(callback: IAction1<any>, thisArg?: any): void;
-    subscribe(callback: any, thisArg?: any) {
+    subscribe(callback: IAction1<any>, thisArg?: any) {
         if (this._eventChannel) {
             EventHub.subscribe(this._eventChannel.name, callback, thisArg);
         }
     }
-    unsubscribe(thisArg: any): void;
-    unsubscribe(callback: IAction1<any>, thisArg?: any): void;
-    unsubscribe(callback: any, thisArg?: any) {
+
+    unsubscribe(callback: IAction1<any>, thisArg?: any) {
         if (this._eventChannel) {
             EventHub.unsubscribe(this._eventChannel.name, callback, thisArg);
         }
