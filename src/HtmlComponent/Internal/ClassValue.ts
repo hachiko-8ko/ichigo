@@ -1,5 +1,6 @@
 import { BaseValue } from './BaseValue';
 import { BoundComponent } from '../BoundComponent';
+import { ChangeTracker } from './ChangeTracker';
 
 export class ClassValue extends BaseValue {
 
@@ -33,7 +34,7 @@ export class ClassValue extends BaseValue {
     className?: string;
 
     private _negative: boolean;
-    private _currentClass?: string;
+    private _changeTracker: ChangeTracker;
     // TODO: Remove otherComponentId
     private _otherComponentId?: string;
 
@@ -47,9 +48,10 @@ export class ClassValue extends BaseValue {
         this._negative = negative || false;
 
         if (this.baseClass) {
-            this._currentClass = this.content.className;
+            this._changeTracker = new ChangeTracker(content, { className: content.className });
         } else {
-            this._currentClass = this.content.classList.contains(this.className!) ? 'SET' : '';
+            // { classList: { red: true } } (could be expanded to take complex types, but parsing the HTML would be ugly)
+            this._changeTracker = new ChangeTracker(content, { classList: { [className!]: content.classList.contains(this.className!) } });
         }
 
         if (otherComponentId) {
@@ -60,11 +62,7 @@ export class ClassValue extends BaseValue {
     render(): void {
         if (this.baseClass) {
             const newValue = this._getStringValue(this.source, false, this._otherComponentId) || '';
-            // change detection depends on no outside processes updating the DOM
-            if (newValue !== this._currentClass) {
-                this._currentClass = newValue; // save a copy
-                this.content.className = newValue;
-            }
+            this._changeTracker.apply({ className: newValue });
             return;
         }
 
@@ -75,18 +73,7 @@ export class ClassValue extends BaseValue {
         if (this._negative) {
             val = !val;
         }
-        if (val) {
-            // change detection depends on no outside processes updating the DOM
-            if (!this._currentClass) {
-                this._currentClass = 'SET'; // save a copy
-                this.content.classList.add(this.className!);
-            }
-        } else {
-            if (this._currentClass) {
-                this._currentClass = ''; // update the copy
-                this.content.classList.remove(this.className!);
-            }
-        }
+        this._changeTracker.apply({ classList: { [this.className!]: val } });
     }
 }
 

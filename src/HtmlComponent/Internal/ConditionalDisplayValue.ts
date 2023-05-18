@@ -1,5 +1,6 @@
 import { BaseValue } from './BaseValue';
 import { BoundComponent } from '../BoundComponent';
+import { ChangeTracker } from './ChangeTracker';
 
 /**
  * Unlike more serious languages like Angular or Vue, which don't even render the component if ng-if is false, this just hides it
@@ -30,8 +31,7 @@ export class ConditionalDisplayValue extends BaseValue {
     }
 
     private _negative: boolean;
-    private _visible: boolean = true;
-    private _previousCssDisplaySetting: string = '';
+    private _changeTracker: ChangeTracker;
 
     // TODO: Remove otherComponentId
     private _otherComponentId?: string;
@@ -40,7 +40,7 @@ export class ConditionalDisplayValue extends BaseValue {
         super(component, viewModel, content, source || '');
         this._negative = negative || false;
 
-        this._visible = this.content.style.display !== 'none';
+        this._changeTracker = new ChangeTracker(content, { ['style.display']: this.content.style.display, ['previousStyle.display']: '' });
 
         if (otherComponentId) {
             this._otherComponentId = otherComponentId;
@@ -53,25 +53,7 @@ export class ConditionalDisplayValue extends BaseValue {
         if (this._negative) {
             val = !val;
         }
-        if (val) {
-            // change detection depends on no outside processes updating the DOM
-            if (!this._visible) {
-                this._visible = true; // save new setting
-                if (this._previousCssDisplaySetting === 'none') {
-                    this._previousCssDisplaySetting = '';
-                }
-                this.content.style.setProperty('display', this._previousCssDisplaySetting);
-            }
-        } else {
-            if (this._visible) {
-                this._visible = false;
-                const current = this.content.style.display;
-                if (current !== 'none') {
-                    this._previousCssDisplaySetting = current || '';
-                }
-                this.content.style.setProperty('display', 'none');
-            }
-        }
+        this._changeTracker.apply({ ['style.display']: val ? '' : 'none' });
     }
 }
 

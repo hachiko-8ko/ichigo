@@ -86,13 +86,10 @@ export class ObjectProxyHandler<T extends Record<string, any> = any> extends Obs
         super.invoke(new PropertyChangedEventArgs({ type, propertyName, oldValue, newValue, sender }), "ObjectProxy");
     }
 
-    subscribe(callback: IAction1<PropertyChangedEventArgs>, thisArg?: any): void;
     subscribe(callback: IAction1<PropertyChangedEventArgs>, thisArg?: any): void {
         super.subscribe(callback, thisArg);
     }
 
-    unsubscribe(thisArg: any): void;
-    unsubscribe(callback: IAction1<any>, thisArg?: any): void;
     unsubscribe(callback: IAction1<any>, thisArg?: any): void {
         super.unsubscribe(callback, thisArg);
     }

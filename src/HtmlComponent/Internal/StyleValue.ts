@@ -1,5 +1,6 @@
 import { BaseValue } from './BaseValue';
 import { BoundComponent } from '../BoundComponent';
+import { ChangeTracker } from './ChangeTracker';
 
 export class StyleValue extends BaseValue {
 
@@ -33,7 +34,7 @@ export class StyleValue extends BaseValue {
     baseStyle: boolean;
     styleName?: string;
 
-    private _currentValue?: string;
+    private _changeTracker: ChangeTracker;
     // TODO: Remove otherComponentId
     private _otherComponentId?: string;
 
@@ -42,9 +43,9 @@ export class StyleValue extends BaseValue {
         this.baseStyle = baseStyle || false;
         if (styleName) {
             this.styleName = toCamelCase(styleName);
-            this._currentValue = (this.content.style as any)[this.styleName];
+            this._changeTracker = new ChangeTracker(content, { ['style.cssList']: { [this.styleName]: (this.content.style as any)[this.styleName] } });
         } else {
-            this._currentValue = this.content.style.cssText;
+            this._changeTracker = new ChangeTracker(content, { ['style.cssText']: content.style.cssText || '' });
         }
 
         if (!this.baseStyle && !this.styleName) {
@@ -66,15 +67,7 @@ export class StyleValue extends BaseValue {
     render(): void {
         if (this.baseStyle) {
             const newValue = this._getStringValue(this.source, false, this._otherComponentId) || '';
-            // change detection depends on no outside processes updating the DOM
-            if (newValue !== this._currentValue) {
-                this._currentValue = newValue; // save a copy
-                this.content.style.cssText = newValue;
-                if (newValue && !this.content.style.cssText) {
-                    // tslint:disable-next-line:no-console
-                    console.warn(`Invalid style text in component: ${newValue}`);
-                }
-            }
+            this._changeTracker.apply({ ['style.cssText']: newValue });
             return;
         }
 
@@ -82,18 +75,7 @@ export class StyleValue extends BaseValue {
 
         // If truthy, set style with the value given, else clear it.
         const val = this._getStringValue(this.source, true, this._otherComponentId);
-        if (val) {
-            // change detection depends on no outside processes updating the DOM
-            if (val !== this._currentValue) {
-                this._currentValue = val; // save a copy
-                (this.content.style as any)[this.styleName!] = val;
-            }
-        } else {
-            if (this._currentValue) {
-                this._currentValue = ''; // update the copy
-                this.content.style.removeProperty(this.styleName!);
-            }
-        }
+        this._changeTracker.apply({ ['style.cssList']: { [this.styleName!]: val } });
     }
 }
 

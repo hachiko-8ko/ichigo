@@ -1,9 +1,10 @@
-import { e_ } from '../../System/Utility/Elvis';
+import { FormFieldValue, getFormFieldValue } from '../../Html/FormFieldValue';
 import { observablePropertyCheck } from '../../Observable/ObservableProperty';
 import { observableStateCheck } from '../../Observable/ObservableState';
-import { FormFieldValue, getFormFieldValue, setFormFieldValue, checkFormFieldEquality } from '../../Html/FormFieldValue';
-import { BaseValue } from './BaseValue';
+import { e_ } from '../../System/Utility/Elvis';
 import { BoundComponent } from '../BoundComponent';
+import { BaseValue } from './BaseValue';
+import { ChangeTracker } from './ChangeTracker';
 
 export class FormInputValue extends BaseValue {
     static add(component: BoundComponent, content: HTMLElement, viewModel: any, attr: string, attrValue: string, otherComponentId: string | undefined, getterCallback: () => FormInputValue | undefined, setterCallback: (val: FormInputValue) => void): boolean {
@@ -47,12 +48,14 @@ export class FormInputValue extends BaseValue {
         return true;
     }
 
+    private _changeTracker: ChangeTracker;
     private _writeTargets: string[] = [];
     // TODO: Remove otherComponentId
     private _otherComponentId?: string;
 
     constructor({ component, content, viewModel, source, otherComponentId }: { component: BoundComponent, content: HTMLElement, viewModel: any, source?: string, otherComponentId?: string }) {
         super(component, viewModel, content, source || '');
+        this._changeTracker = new ChangeTracker(content);
         if (otherComponentId) {
             this._otherComponentId = otherComponentId;
         }
@@ -76,11 +79,7 @@ export class FormInputValue extends BaseValue {
         // If only one-way writing from form to view model, there won't be a source, and render() will do nothing.
         if (this.source) {
             const newValue = this._getUntypedValue(this.source, this._otherComponentId);
-            // in this case, there's definitely outside processes updating the DOM, so we have to check
-            const currentValue = getFormFieldValue(this.content);
-            if (!checkFormFieldEquality(newValue, currentValue)) {
-                setFormFieldValue(this.content, newValue);
-            }
+            this._changeTracker.apply({ ['input.value']: newValue });
         }
     }
 

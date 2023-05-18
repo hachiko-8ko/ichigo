@@ -109,13 +109,10 @@ export class ArrayProxyHandler<T = any> extends ObservableBase<PropertyChangedEv
         super.invoke(new ArrayChangedEventArgs<T>({ type, propertyName, args, sender }));
     }
 
-    subscribe(callback: IAction1<ArrayChangedEventArgs>, thisArg?: any): void;
     subscribe(callback: IAction1<ArrayChangedEventArgs>, thisArg?: any): void {
         super.subscribe(callback, thisArg);
     }
 
-    unsubscribe(thisArg: any): void;
-    unsubscribe(callback: IAction1<any>, thisArg?: any): void;
     unsubscribe(callback: IAction1<any>, thisArg?: any): void {
         super.unsubscribe(callback, thisArg);
     }

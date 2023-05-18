@@ -1,5 +1,6 @@
 import { BoundComponent } from '../BoundComponent';
 import { BaseValue } from './BaseValue';
+import { ChangeTracker } from './ChangeTracker';
 
 export class AttributeValue extends BaseValue {
     static add(component: BoundComponent, content: HTMLElement, viewModel: any, attr: string, attrValue: string, otherComponentId: string | undefined, current: AttributeValue[]): boolean {
@@ -25,7 +26,7 @@ export class AttributeValue extends BaseValue {
     attribute: string;
     private _bool: boolean;
     private _negative?: boolean;
-    private _currentValue?: string;
+    private _changeTracker: ChangeTracker;
     // TODO: Remove otherComponentId
     private _otherComponentId?: string;
 
@@ -37,15 +38,15 @@ export class AttributeValue extends BaseValue {
 
         if (this._bool) {
             try {
-                this._currentValue = this.content.attributes.getNamedItem(this.attribute).value ? 'SET' : '';
+                this._changeTracker = new ChangeTracker(content, { [attribute]: this.content.attributes.getNamedItem(this.attribute).value ? this.attribute : null });
             } catch {
-                this._currentValue = '';
+                this._changeTracker = new ChangeTracker(content, { [attribute]: null });
             }
         } else {
             try {
-                this._currentValue = this.content.attributes.getNamedItem(this.attribute).value;
+                this._changeTracker = new ChangeTracker(content, { [attribute]: this.content.attributes.getNamedItem(this.attribute).value });
             } catch {
-                this._currentValue = '';
+                this._changeTracker = new ChangeTracker(content, { [attribute]: '' });
             }
         }
 
@@ -57,11 +58,7 @@ export class AttributeValue extends BaseValue {
     render(): void {
         if (!this._bool) {
             const newValue = this._getStringValue(this.source, false, this._otherComponentId) || '';
-            // change detection depends on no outside processes updating the DOM
-            if (newValue !== this._currentValue) {
-                this._currentValue = newValue; // save a copy
-                this.content.setAttribute(this.attribute, newValue);
-            }
+            this._changeTracker.apply({ [this.attribute]: newValue });
             return;
         }
 
@@ -74,18 +71,7 @@ export class AttributeValue extends BaseValue {
         } else {
             val = !!val;
         }
-        if (val) {
-            // change detection depends on no outside processes updating the DOM
-            if (!this._currentValue) {
-                this._currentValue = 'SET'; // save a copy
-                this.content.setAttribute(this.attribute, val);
-            }
-        } else {
-            if (this._currentValue) {
-                this._currentValue = ''; // update the copy
-                this.content.removeAttribute(this.attribute);
-            }
-        }
+        this._changeTracker.apply({ [this.attribute]: val ? this.attribute : null });
     }
 }
 
@@ -116,7 +102,7 @@ function parseAttributeName(attributeName: string): { attribute: string, bool?: 
             throw new Error("Binding attribute name is missing.");
         }
 
-        const attribute = attributeName.slice(8);
+        const attribute = attributeName.slice(8).toLowerCase();
         if (!attribute) {
             throw new Error("Attribute name is missing.");
         }

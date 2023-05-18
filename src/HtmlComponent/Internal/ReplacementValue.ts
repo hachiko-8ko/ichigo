@@ -3,6 +3,7 @@ import { createElement } from '../../Html/CreateElement';
 import { BoundComponent } from '../BoundComponent';
 import { BaseValue } from './BaseValue';
 import { LoopValue } from './LoopValue';
+import { ChangeTracker } from './ChangeTracker';
 
 export class ReplacementValue extends BaseValue {
     static addHtmlTemplate(component: BoundComponent, content: HTMLElement, viewModel: any, current: ReplacementValue[], id?: string): void {
@@ -48,12 +49,13 @@ export class ReplacementValue extends BaseValue {
     }
 
     private _noescape: boolean;
+    private _changeTracker: ChangeTracker;
     private _otherComponentId?: string;
-    private _currentContent?: string;
 
     constructor({ component, viewModel, element, source, noescape, otherComponentId }: { component: BoundComponent, viewModel: any, element: HTMLElement, source: string, noescape: boolean, otherComponentId?: string | null }) {
         super(component, viewModel, element, source);
         this._noescape = noescape;
+        this._changeTracker = new ChangeTracker(element);
         if (otherComponentId) {
             this._otherComponentId = otherComponentId;
         }
@@ -61,11 +63,7 @@ export class ReplacementValue extends BaseValue {
 
     render(): void {
         const newValue = this._getStringValue(this.source, this._noescape, this._otherComponentId) || '';
-        // change detection depends on no outside processes updating the DOM
-        if (newValue !== this._currentContent) {
-            this._currentContent = newValue; // save a copy
-            this.content.innerHTML = newValue;
-        }
+        this._changeTracker.apply({ innerHTML: newValue });
     }
 }
 
